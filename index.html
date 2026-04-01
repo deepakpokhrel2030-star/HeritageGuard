@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>HeritageGuard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300;1,9..144,500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header id="nav">
+    <div class="logo" onclick="goPage('home')">
+      <div class="logo-mark">HG</div>
+      <span class="logo-name">Heritage<span class="logo-accent">Guard</span></span>
+    </div>
+    <nav class="nav-links">
+      <button class="nl" id="nl-home"    onclick="goPage('home')">Home</button>
+      <button class="nl" id="nl-archive" onclick="goPage('archive')">Archive</button>
+      <button class="nl hidden" id="nl-upload"  onclick="goPage('upload')">Upload</button>
+      <button class="nl hidden" id="nl-admin"   onclick="goPage('admin')">Admin</button>
+    </nav>
+    <div class="nav-auth">
+      <div id="nav-guest">
+        <button class="btn-ghost-nav" onclick="goPage('login')">Sign in</button>
+        <button class="btn-accent-nav" onclick="openRegister()">Register</button>
+      </div>
+      <div id="nav-user" class="hidden">
+        <button class="user-chip" onclick="goPage('profile')">
+          <span class="chip-av" id="chip-av">D</span>
+          <span class="chip-name" id="chip-name">—</span>
+        </button>
+        <button class="btn-so" onclick="doLogout()">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- TOAST -->
+  <div id="toast" class="hidden"></div>
+
+  <!-- LOADER -->
+  <div id="loader" class="hidden"><div class="loader-ring"></div></div>
+
+  <!-- MODAL -->
+  <div id="modal" class="hidden">
+    <div class="modal-box">
+      <div class="modal-icon">⚠</div>
+      <h3 id="modal-title">Confirm</h3>
+      <p  id="modal-msg"></p>
+      <div class="modal-btns">
+        <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn-red"   id="modal-ok">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+
+    <!-- ════ HOME ════════════════════════════════ -->
+    <div id="pg-home" class="pg">
+
+      <section class="hero">
+        <div class="hero-content">
+          <div class="hero-pill">Global Heritage Archive</div>
+          <h1 class="hero-h">
+            Preserving what<br>
+            the world must<br>
+            <em>not lose</em>
+          </h1>
+          <p class="hero-body">
+            A cloud-native platform for documenting endangered cultural heritage — 3D scans, LiDAR surveys, 4K video and photography — secured for future generations.
+          </p>
+          <div class="hero-actions">
+            <button class="btn-primary" onclick="goPage('archive')">Browse Archive</button>
+            <button class="btn-ghost"   onclick="needAuth()">Upload Asset</button>
+          </div>
+        </div>
+        <div class="hero-visual">
+          <div class="hero-img-frame">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/640px-Machu_Picchu%2C_Peru.jpg" alt="Machu Picchu" class="hero-img"/>
+            <div class="hero-img-caption">📷 Machu Picchu, Peru · Image</div>
+            <div class="hero-img-glow"></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="stats-strip">
+        <div class="stat-item"><span class="stat-n" id="home-total">10</span><span class="stat-l">Assets archived</span></div>
+        <div class="stat-div"></div>
+        <div class="stat-item"><span class="stat-n">1,121</span><span class="stat-l">UNESCO sites</span></div>
+        <div class="stat-div"></div>
+        <div class="stat-item"><span class="stat-n">65%</span><span class="stat-l">At risk of loss</span></div>
+        <div class="stat-div"></div>
+        <div class="stat-item"><span class="stat-n">5</span><span class="stat-l">Media types</span></div>
+      </div>
+
+      <section class="home-section">
+        <div class="section-head">
+          <h2 class="section-title">Featured Assets</h2>
+          <button class="link-btn" onclick="goPage('archive')">View all →</button>
+        </div>
+        <div id="featured-grid" class="grid"></div>
+      </section>
+
+      <section class="formats-section">
+        <h2 class="section-title" style="margin-bottom:1.5rem">Supported Formats</h2>
+        <div class="format-cards">
+          <div class="format-card" onclick="goArchiveType('image')">
+            <span class="fmt-icon">📷</span>
+            <span class="fmt-name">Images</span>
+            <span class="fmt-desc">High-resolution photography</span>
+          </div>
+          <div class="format-card" onclick="goArchiveType('video')">
+            <span class="fmt-icon">🎬</span>
+            <span class="fmt-name">4K Video</span>
+            <span class="fmt-desc">Documentary footage</span>
+          </div>
+          <div class="format-card" onclick="goArchiveType('3dscan')">
+            <span class="fmt-icon">📦</span>
+            <span class="fmt-name">3D Scans</span>
+            <span class="fmt-desc">Photogrammetric models</span>
+          </div>
+          <div class="format-card" onclick="goArchiveType('lidar')">
+            <span class="fmt-icon">🛰</span>
+            <span class="fmt-name">LiDAR</span>
+            <span class="fmt-desc">Point cloud surveys</span>
+          </div>
+          <div class="format-card" onclick="goArchiveType('document')">
+            <span class="fmt-icon">📄</span>
+            <span class="fmt-name">Documents</span>
+            <span class="fmt-desc">Surveys &amp; reports</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ════ ARCHIVE ═════════════════════════════ -->
+    <div id="pg-archive" class="pg hidden">
+      <div class="pg-top">
+        <div>
+          <h1 class="pg-title">Archive</h1>
+          <p class="pg-sub">Browse all heritage assets</p>
+        </div>
+        <button class="btn-primary" onclick="needAuth()">+ Upload</button>
+      </div>
+
+      <div class="search-block">
+        <div class="search-main">
+          <span class="search-ico">⌕</span>
+          <input id="sq" type="text" placeholder="Search title, location, description…" oninput="debSearch()"/>
+        </div>
+        <input id="sl" class="search-sm" type="text" placeholder="Location…" oninput="debSearch()"/>
+        <input id="st" class="search-sm" type="text" placeholder="Tag…"      oninput="debSearch()"/>
+        <button class="btn-clear" onclick="clearSearch()">Clear</button>
+      </div>
+
+      <div class="type-pills">
+        <button class="tp active" data-t=""         onclick="setType(this,'')">All</button>
+        <button class="tp"        data-t="image"    onclick="setType(this,'image')">📷 Images</button>
+        <button class="tp"        data-t="video"    onclick="setType(this,'video')">🎬 Video</button>
+        <button class="tp"        data-t="3dscan"   onclick="setType(this,'3dscan')">📦 3D Scans</button>
+        <button class="tp"        data-t="lidar"    onclick="setType(this,'lidar')">🛰 LiDAR</button>
+        <button class="tp"        data-t="document" onclick="setType(this,'document')">📄 Documents</button>
+      </div>
+
+      <p id="res-count" class="res-count"></p>
+      <div id="archive-grid" class="grid"></div>
+      <div id="no-results" class="empty-state hidden">
+        <span class="empty-icon">◎</span>
+        <p>No assets match your search.</p>
+        <button class="btn-ghost" onclick="clearSearch()">Clear filters</button>
+      </div>
+    </div>
+
+    <!-- ════ DETAIL ══════════════════════════════ -->
+    <div id="pg-detail" class="pg hidden">
+      <div class="detail-top">
+        <button class="back-btn" id="det-back">← Back</button>
+        <div id="det-acts" class="hidden det-act-row">
+          <button class="btn-ghost" onclick="openEditPg()">Edit</button>
+          <button class="btn-red-sm" onclick="confirmDelAsset()">Delete</button>
+        </div>
+      </div>
+      <div id="det-body"></div>
+    </div>
+
+    <!-- ════ LOGIN ════════════════════════════════ -->
+    <div id="pg-login" class="pg hidden">
+      <div class="auth-wrap">
+        <div class="auth-card">
+          <div class="auth-logo">
+            <div class="logo-mark">HG</div>
+            <span class="logo-name">Heritage<span class="logo-accent">Guard</span></span>
+          </div>
+          <h2 class="auth-title">Welcome back</h2>
+          <p class="auth-sub">Sign in to contribute to the global archive</p>
+
+          <div class="auth-tabs">
+            <button class="at active" id="at-in"  onclick="authTab('in')">Sign in</button>
+            <button class="at"        id="at-reg" onclick="authTab('reg')">Register</button>
+          </div>
+
+          <!-- SIGN IN -->
+          <div id="f-in">
+            <div class="field"><label>Email address</label><input type="email" id="in-em" placeholder="your@email.com"/></div>
+            <div class="field"><label>Password</label><input type="password" id="in-pw" placeholder="••••••••"/></div>
+            <button class="btn-primary w100" onclick="doLogin()">Sign in</button>
+            <div class="demo-row">
+              <span class="demo-lbl">Quick demo:</span>
+              <button class="demo-btn" onclick="fillDemo('admin@heritaguard.org','admin1234')">Admin</button>
+              <button class="demo-btn" onclick="fillDemo('contributor@heritaguard.org','demo1234')">Contributor</button>
+            </div>
+          </div>
+
+          <!-- REGISTER -->
+          <div id="f-reg" class="hidden">
+            <div class="field-row">
+              <div class="field"><label>First name <r>*</r></label><input type="text" id="rg-fn" placeholder="Deepak"/></div>
+              <div class="field"><label>Last name <r>*</r></label><input type="text" id="rg-ln" placeholder="Pokhrel"/></div>
+            </div>
+            <div class="field"><label>Email <r>*</r></label><input type="email" id="rg-em" placeholder="your@email.com"/></div>
+            <div class="field"><label>Password <r>*</r></label><input type="password" id="rg-pw" placeholder="Min. 8 characters"/></div>
+            <div class="field"><label>Organisation <span class="opt">optional</span></label><input type="text" id="rg-org" placeholder="e.g. UNESCO, British Museum"/></div>
+            <button class="btn-primary w100" onclick="doRegister()">Create account</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ UPLOAD ═══════════════════════════════ -->
+    <div id="pg-upload" class="pg hidden">
+      <div class="pg-top">
+        <div><h1 class="pg-title">Upload Asset</h1><p class="pg-sub">Add a new asset to the preservation archive</p></div>
+        <button class="btn-ghost" onclick="goPage('archive')">Cancel</button>
+      </div>
+      <div class="two-col">
+        <div class="col-main">
+          <div class="fblock">
+            <h3 class="fblock-title">Asset Details</h3>
+            <div class="field"><label>Title <r>*</r></label><input type="text" id="u-ti" placeholder="e.g. Machu Picchu — South Wall Stonework"/></div>
+            <div class="field"><label>Description</label><textarea id="u-de" rows="4" placeholder="Historical significance, current condition, preservation urgency…"></textarea></div>
+            <div class="field-row">
+              <div class="field"><label>Location <r>*</r></label><input type="text" id="u-lo" placeholder="e.g. Cusco, Peru"/></div>
+              <div class="field"><label>Region <r>*</r></label>
+                <select id="u-re"><option value="">Select…</option>
+                  <option>Africa</option><option>Asia</option><option>Europe</option>
+                  <option>Middle East</option><option>North America</option>
+                  <option>Oceania</option><option>South America</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Media Type <r>*</r></label>
+                <select id="u-ty" onchange="chkSpecs(this.value)">
+                  <option value="">Select…</option>
+                  <option value="image">📷 Image</option>
+                  <option value="video">🎬 4K Video</option>
+                  <option value="3dscan">📦 3D Scan</option>
+                  <option value="lidar">🛰 LiDAR Survey</option>
+                  <option value="document">📄 Document</option>
+                </select>
+              </div>
+              <div class="field"><label>Tags <span class="opt">comma separated</span></label><input type="text" id="u-ta" placeholder="UNESCO, ruins, ancient"/></div>
+            </div>
+          </div>
+
+          <div class="fblock hidden" id="spec-card">
+            <h3 class="fblock-title">Technical Specifications</h3>
+            <div class="field-row">
+              <div class="field"><label>Accuracy / Resolution</label><input type="text" id="u-ac" placeholder="e.g. 2mm / 50,000 pts/m²"/></div>
+              <div class="field"><label>Capture Method</label><input type="text" id="u-me" placeholder="e.g. Drone LiDAR"/></div>
+            </div>
+            <div class="field"><label>Equipment</label><input type="text" id="u-eq" placeholder="e.g. DJI Zenmuse L1, Leica BLK360"/></div>
+          </div>
+
+          <div class="fblock">
+            <h3 class="fblock-title">File Upload</h3>
+            <div class="file-zone" id="fzone" onclick="document.getElementById('u-fi').click()">
+              <input type="file" id="u-fi" style="display:none" accept="image/*,video/*,.pdf,.obj,.ply,.glb,.las,.laz,.pts" onchange="onFilePick(this)"/>
+              <div id="fzone-ui">
+                <div class="fzone-arrow">↑</div>
+                <p class="fzone-main">Click to choose file</p>
+                <p class="fzone-sub">Images · 4K Video · 3D Scans · LiDAR · PDF</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-side">
+          <button class="btn-primary w100" onclick="doUpload()">Upload Asset</button>
+          <button class="btn-ghost   w100" onclick="goPage('archive')">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ EDIT ══════════════════════════════════ -->
+    <div id="pg-edit" class="pg hidden">
+      <div class="pg-top">
+        <div><h1 class="pg-title">Edit Asset</h1></div>
+        <button class="btn-ghost" onclick="goPage('detail')">Cancel</button>
+      </div>
+      <div class="two-col">
+        <div class="col-main">
+          <div class="fblock">
+            <h3 class="fblock-title">Asset Details</h3>
+            <div class="field"><label>Title <r>*</r></label><input type="text" id="e-ti"/></div>
+            <div class="field"><label>Description</label><textarea id="e-de" rows="4"></textarea></div>
+            <div class="field-row">
+              <div class="field"><label>Location <r>*</r></label><input type="text" id="e-lo"/></div>
+              <div class="field"><label>Region</label>
+                <select id="e-re">
+                  <option>Africa</option><option>Asia</option><option>Europe</option>
+                  <option>Middle East</option><option>North America</option>
+                  <option>Oceania</option><option>South America</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Media Type</label>
+                <select id="e-ty">
+                  <option value="image">📷 Image</option><option value="video">🎬 4K Video</option>
+                  <option value="3dscan">📦 3D Scan</option><option value="lidar">🛰 LiDAR</option>
+                  <option value="document">📄 Document</option>
+                </select>
+              </div>
+              <div class="field"><label>Tags</label><input type="text" id="e-ta"/></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-side">
+          <button class="btn-primary w100" onclick="doUpdate()">Save Changes</button>
+          <button class="btn-red    w100" onclick="confirmDelAsset()">Delete Asset</button>
+          <button class="btn-ghost  w100" onclick="goPage('detail')">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ PROFILE ══════════════════════════════ -->
+    <div id="pg-profile" class="pg hidden">
+      <div class="pg-top">
+        <div><h1 class="pg-title">My Profile</h1><p class="pg-sub">Manage your account details</p></div>
+      </div>
+      <div class="profile-layout">
+        <aside class="profile-aside">
+          <div class="profile-card">
+            <div class="profile-av" id="p-av-big">D</div>
+            <div class="profile-name" id="p-full">—</div>
+            <div class="profile-role" id="p-role">—</div>
+            <div class="profile-org"  id="p-org-disp">—</div>
+          </div>
+          <div class="profile-stats">
+            <div class="pstat"><span class="pstat-n" id="p-count">0</span><span class="pstat-l">Uploads</span></div>
+            <div class="pstat-div"></div>
+            <div class="pstat"><span class="pstat-n" id="p-joined">—</span><span class="pstat-l">Member since</span></div>
+          </div>
+        </aside>
+        <div class="profile-main">
+          <div class="fblock">
+            <h3 class="fblock-title">Personal Information</h3>
+            <div class="field-row">
+              <div class="field"><label>First name</label><input type="text" id="p-fn"/></div>
+              <div class="field"><label>Last name</label><input type="text" id="p-ln"/></div>
+            </div>
+            <div class="field"><label>Email address</label><input type="email" id="p-em"/></div>
+            <div class="field"><label>Organisation</label><input type="text" id="p-org"/></div>
+            <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+          </div>
+          <div class="fblock">
+            <h3 class="fblock-title">Change Password</h3>
+            <div class="field"><label>Current password</label><input type="password" id="p-cp" placeholder="••••••••"/></div>
+            <div class="field"><label>New password</label><input type="password" id="p-np" placeholder="Min. 8 characters"/></div>
+            <div class="field"><label>Confirm new password</label><input type="password" id="p-np2" placeholder="Repeat new password"/></div>
+            <button class="btn-primary" onclick="changePass()">Update Password</button>
+          </div>
+          <div class="fblock">
+            <h3 class="fblock-title">My Uploads</h3>
+            <div id="my-grid" class="grid"></div>
+            <p id="no-mine" class="empty-p hidden">You have not uploaded any assets yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ ADMIN ════════════════════════════════ -->
+    <div id="pg-admin" class="pg hidden">
+      <div class="pg-top">
+        <div><h1 class="pg-title">Admin Panel</h1><p class="pg-sub">Manage users and assets</p></div>
+      </div>
+      <div class="admin-tabs">
+        <button class="admin-tab active" id="adt-u" onclick="adminTab('u')">Users <span class="adt-badge" id="ub">—</span></button>
+        <button class="admin-tab"        id="adt-a" onclick="adminTab('a')">Assets <span class="adt-badge" id="ab">—</span></button>
+      </div>
+      <div id="adv-u">
+        <div class="table-card">
+          <div class="tscroll">
+            <table class="dtbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Organisation</th><th>Joined</th><th></th></tr></thead>
+            <tbody id="t-users"></tbody></table>
+          </div>
+        </div>
+      </div>
+      <div id="adv-a" class="hidden">
+        <div class="table-card">
+          <div class="tscroll">
+            <table class="dtbl"><thead><tr><th>Title</th><th>Type</th><th>Location</th><th>Uploaded by</th><th>Date</th><th></th></tr></thead>
+            <tbody id="t-assets"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="foot-inner">
+      <div class="foot-brand">Heritage<span>Guard</span></div>
+      <div class="foot-copy">© 2026 HeritageGuard · Preserving cultural heritage for future generations</div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

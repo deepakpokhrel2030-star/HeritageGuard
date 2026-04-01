@@ -1,0 +1,2 @@
+/* config.js */
+const CONFIG={ENDPOINTS:{getAssets:'YOUR_GET_ALL_LOGIC_APP_URL',getAsset:'YOUR_GET_ONE_LOGIC_APP_URL',createAsset:'YOUR_CREATE_LOGIC_APP_URL',updateAsset:'YOUR_UPDATE_LOGIC_APP_URL',deleteAsset:'YOUR_DELETE_LOGIC_APP_URL'}}

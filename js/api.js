@@ -1,0 +1,6 @@
+/* api.js */
+async function getAllAssets(){const r=await fetch(CONFIG.ENDPOINTS.getAssets,{method:'GET',headers:{'Content-Type':'application/json'}});if(!r.ok)throw new Error(r.status);return r.json()}
+async function getAssetById(id){const r=await fetch(CONFIG.ENDPOINTS.getAsset+'?id='+encodeURIComponent(id),{method:'GET',headers:{'Content-Type':'application/json'}});if(!r.ok)throw new Error(r.status);return r.json()}
+async function createAsset(fd){const r=await fetch(CONFIG.ENDPOINTS.createAsset,{method:'POST',body:fd});if(!r.ok)throw new Error(r.status);return r.json()}
+async function updateAsset(id,data){const r=await fetch(CONFIG.ENDPOINTS.updateAsset,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...data})});if(!r.ok)throw new Error(r.status);return r.json()}
+async function deleteAsset(id){const r=await fetch(CONFIG.ENDPOINTS.deleteAsset,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});if(!r.ok)throw new Error(r.status);return r.json()}
