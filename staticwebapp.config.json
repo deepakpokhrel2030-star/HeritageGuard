@@ -1,0 +1,38 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/css/*", "/js/*", "/assets/*", "/*.json", "/*.jpg", "/*.png", "/*.svg", "/*.ico"]
+  },
+  "globalHeaders": {
+    "cache-control": "public, max-age=0, must-revalidate",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "SAMEORIGIN"
+  },
+  "mimeTypes": {
+    ".json": "application/json",
+    ".las":  "application/octet-stream",
+    ".laz":  "application/octet-stream",
+    ".obj":  "application/octet-stream",
+    ".glb":  "model/gltf-binary"
+  },
+  "routes": [
+    {
+      "route": "/assets/*",
+      "headers": {
+        "cache-control": "public, max-age=86400"
+      }
+    },
+    {
+      "route": "/css/*",
+      "headers": {
+        "cache-control": "public, max-age=86400"
+      }
+    },
+    {
+      "route": "/js/*",
+      "headers": {
+        "cache-control": "public, max-age=86400"
+      }
+    }
+  ]
+}

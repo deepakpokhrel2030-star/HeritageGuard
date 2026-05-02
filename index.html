@@ -3,40 +3,47 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>HeritageGuard</title>
+  <title>HeritageGuard — Global Cultural Archive</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;1,9..144,300;1,9..144,500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,300;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
 
   <!-- NAVBAR -->
   <header id="nav">
-    <div class="logo" onclick="goPage('home')">
-      <div class="logo-mark">HG</div>
-      <span class="logo-name">Heritage<span class="logo-accent">Guard</span></span>
-    </div>
-    <nav class="nav-links">
-      <button class="nl" id="nl-home"    onclick="goPage('home')">Home</button>
-      <button class="nl" id="nl-archive" onclick="goPage('archive')">Archive</button>
-      <button class="nl hidden" id="nl-upload"  onclick="goPage('upload')">Upload</button>
-      <button class="nl hidden" id="nl-admin"   onclick="goPage('admin')">Admin</button>
-    </nav>
-    <div class="nav-auth">
-      <div id="nav-guest">
-        <button class="btn-ghost-nav" onclick="goPage('login')">Sign in</button>
-        <button class="btn-accent-nav" onclick="openRegister()">Register</button>
+    <div class="nav-inner">
+      <div class="logo" onclick="goPage('home')">
+        <div class="logo-mark"><span>HG</span></div>
+        <div class="logo-text">
+          <span class="logo-name">Heritage<span class="logo-accent">Guard</span></span>
+        </div>
       </div>
-      <div id="nav-user" class="hidden">
-        <button class="user-chip" onclick="goPage('profile')">
-          <span class="chip-av" id="chip-av">D</span>
-          <span class="chip-name" id="chip-name">—</span>
-        </button>
-        <button class="btn-so" onclick="doLogout()">Sign out</button>
+      <nav class="nav-links">
+        <button class="nl" id="nl-home"    onclick="goPage('home')">Home</button>
+        <button class="nl" id="nl-archive" onclick="goPage('archive')">Archive</button>
+        <button class="nl hidden" id="nl-upload"  onclick="goPage('upload')">Upload</button>
+        <button class="nl hidden" id="nl-admin"   onclick="goPage('admin')">Admin</button>
+      </nav>
+      <div class="nav-auth">
+        <div id="nav-guest">
+          <button class="btn-nav-ghost" onclick="goPage('login')">Sign in</button>
+          <button class="btn-nav-gold"  onclick="openRegister()">Register</button>
+        </div>
+        <div id="nav-user" class="hidden">
+          <button class="user-chip" onclick="goPage('profile')">
+            <span class="chip-av" id="chip-av">D</span>
+            <span class="chip-name" id="chip-name">—</span>
+          </button>
+          <button class="btn-signout" onclick="doLogout()">Sign out</button>
+        </div>
       </div>
     </div>
   </header>
+
+  <!-- SCROLL PROGRESS -->
+  <div id="scroll-prog"></div>
 
   <!-- TOAST -->
   <div id="toast" class="hidden"></div>
@@ -52,119 +59,420 @@
       <p  id="modal-msg"></p>
       <div class="modal-btns">
         <button class="btn-ghost" onclick="closeModal()">Cancel</button>
-        <button class="btn-red"   id="modal-ok">Delete</button>
+        <button class="btn-danger" id="modal-ok">Delete</button>
       </div>
     </div>
   </div>
 
   <main>
 
-    <!-- ════ HOME ════════════════════════════════ -->
+    <!-- ══════ HOME ══════════════════════════════════ -->
     <div id="pg-home" class="pg">
 
+      <!-- HERO -->
+      <div class="hero-section-bg">
+      <div class="sw">
       <section class="hero">
-        <div class="hero-content">
-          <div class="hero-pill">Global Heritage Archive</div>
-          <h1 class="hero-h">
+        <!-- decorative background blobs -->
+        <div class="hero-blob hero-blob-1" aria-hidden="true"></div>
+        <div class="hero-blob hero-blob-2" aria-hidden="true"></div>
+        <div class="hero-blob hero-blob-3" aria-hidden="true"></div>
+
+        <div class="hero-left">
+          <div class="hero-live">
+            <span class="hero-live-dot"></span>
+            Archive active · Live data
+          </div>
+          <div class="hero-eyebrow">
+            <span class="eyebrow-dot"></span>
+            Global Heritage Archive
+          </div>
+          <h1 class="hero-heading">
             Preserving what<br>
             the world must<br>
-            <em>not lose</em>
+            <em>never lose</em>
           </h1>
+
+          <!-- floating text near heading -->
+          <div class="hero-side-float hsf-1">
+            <span>📡</span>
+            <span>Azure cloud‑backed</span>
+          </div>
+          <div class="hero-side-float hsf-2">
+            <span>🛡️</span>
+            <span>Geo-redundant</span>
+          </div>
+
           <p class="hero-body">
-            A cloud-native platform for documenting endangered cultural heritage — 3D scans, LiDAR surveys, 4K video and photography — secured for future generations.
+            A cloud-native platform for documenting endangered cultural heritage — 3D scans, LiDAR surveys, 4K video, and photography — secured in Microsoft Azure for future generations.
           </p>
           <div class="hero-actions">
-            <button class="btn-primary" onclick="goPage('archive')">Browse Archive</button>
-            <button class="btn-ghost"   onclick="needAuth()">Upload Asset</button>
+            <button class="btn-gold btn-shimmer" onclick="goPage('archive')">Browse Archive</button>
+            <button class="btn-outline" onclick="needAuth()">Upload Asset</button>
+          </div>
+          <div class="hero-trust-note">
+            <span>✓ Free forever</span>
+            <span class="htn-sep">·</span>
+            <span>✓ Open access</span>
+            <span class="htn-sep">·</span>
+            <span>✓ No sign-up to browse</span>
+          </div>
+          <div class="hero-stats">
+            <div class="hs-item">
+              <span class="hs-n" id="home-total">10</span>
+              <span class="hs-l">Assets archived</span>
+            </div>
+            <div class="hs-div"></div>
+            <div class="hs-item">
+              <span class="hs-n">1,121</span>
+              <span class="hs-l">UNESCO sites</span>
+            </div>
+            <div class="hs-div"></div>
+            <div class="hs-item">
+              <span class="hs-n">65%</span>
+              <span class="hs-l">At risk of loss</span>
+            </div>
+          </div>
+          <div class="hero-stat-note">
+            <span class="hsn-dot"></span>
+            <span>Stats update with every upload</span>
           </div>
         </div>
-        <div class="hero-visual">
-          <div class="hero-img-frame">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/640px-Machu_Picchu%2C_Peru.jpg" alt="Machu Picchu" class="hero-img"/>
-            <div class="hero-img-caption">📷 Machu Picchu, Peru · Image</div>
-            <div class="hero-img-glow"></div>
+
+        <div class="hero-right">
+          <div class="hero-img-wrap">
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/eb/Machu_Picchu%2C_Peru.jpg/640px-Machu_Picchu%2C_Peru.jpg"
+              alt="Machu Picchu" class="hero-img" loading="eager"/>
+            <div class="hero-overlay"></div>
+            <!-- floating asset card -->
+            <div class="hero-float">
+              <div class="hf-badge">📷 Image</div>
+              <div class="hf-title">Machu Picchu — South Wall Stonework</div>
+              <div class="hf-meta">
+                <span class="hf-loc">📍 Cusco, Peru</span>
+                <span class="hf-views">👁 2.4k views</span>
+              </div>
+            </div>
+            <!-- floating pills -->
+            <div class="hero-float-tag float-a">
+              <span class="hft-dot"></span>
+              <span>Secured on Azure</span>
+            </div>
+            <div class="hero-float-tag float-b">
+              <span>🌍</span>
+              <span>7 Regions covered</span>
+            </div>
+            <div class="hero-float-tag float-c">
+              <span>🔒</span>
+              <span>Open-access research</span>
+            </div>
+            <div class="hero-float-tag float-d">
+              <span>⚡</span>
+              <span>Real-time sync</span>
+            </div>
           </div>
         </div>
       </section>
+      </div><!-- /sw -->
+      </div><!-- /hero-section-bg -->
 
-      <div class="stats-strip">
-        <div class="stat-item"><span class="stat-n" id="home-total">10</span><span class="stat-l">Assets archived</span></div>
-        <div class="stat-div"></div>
-        <div class="stat-item"><span class="stat-n">1,121</span><span class="stat-l">UNESCO sites</span></div>
-        <div class="stat-div"></div>
-        <div class="stat-item"><span class="stat-n">65%</span><span class="stat-l">At risk of loss</span></div>
-        <div class="stat-div"></div>
-        <div class="stat-item"><span class="stat-n">5</span><span class="stat-l">Media types</span></div>
+      <!-- TRUST ROW -->
+      <div class="trust-section-bg">
+        <div class="sw">
+          <div class="trust-row">
+            <span class="tr-label">Powered by &amp; aligned with</span>
+            <div class="tr-badges">
+              <span class="tr-badge">☁️ Microsoft Azure</span>
+              <span class="tr-badge">🏛️ UNESCO Aligned</span>
+              <span class="tr-badge">🔒 Secure Storage</span>
+              <span class="tr-badge">🌐 Open Access</span>
+              <span class="tr-badge">⚡ Logic Apps API</span>
+            </div>
+          </div>
+        </div>
       </div>
 
+      <!-- MARQUEE STRIP -->
+      <div class="marquee-wrap" aria-hidden="true">
+        <div class="marquee-inner">
+          <span class="mq-item"><span class="mq-dot"></span>Machu Picchu, Peru</span>
+          <span class="mq-item"><span class="mq-dot"></span>Angkor Wat, Cambodia</span>
+          <span class="mq-item"><span class="mq-dot"></span>Petra, Jordan</span>
+          <span class="mq-item"><span class="mq-dot"></span>Great Wall, China</span>
+          <span class="mq-item"><span class="mq-dot"></span>Colosseum, Italy</span>
+          <span class="mq-item"><span class="mq-dot"></span>Stonehenge, England</span>
+          <span class="mq-item"><span class="mq-dot"></span>Palmyra, Syria</span>
+          <span class="mq-item"><span class="mq-dot"></span>Acropolis, Greece</span>
+          <span class="mq-item"><span class="mq-dot"></span>Chichen Itza, Mexico</span>
+          <span class="mq-item"><span class="mq-dot"></span>Taj Mahal, India</span>
+          <span class="mq-item"><span class="mq-dot"></span>Easter Island, Chile</span>
+          <span class="mq-item"><span class="mq-dot"></span>Lascaux Caves, France</span>
+          <span class="mq-item"><span class="mq-dot"></span>Machu Picchu, Peru</span>
+          <span class="mq-item"><span class="mq-dot"></span>Angkor Wat, Cambodia</span>
+          <span class="mq-item"><span class="mq-dot"></span>Petra, Jordan</span>
+          <span class="mq-item"><span class="mq-dot"></span>Great Wall, China</span>
+          <span class="mq-item"><span class="mq-dot"></span>Colosseum, Italy</span>
+          <span class="mq-item"><span class="mq-dot"></span>Stonehenge, England</span>
+          <span class="mq-item"><span class="mq-dot"></span>Palmyra, Syria</span>
+          <span class="mq-item"><span class="mq-dot"></span>Acropolis, Greece</span>
+          <span class="mq-item"><span class="mq-dot"></span>Chichen Itza, Mexico</span>
+          <span class="mq-item"><span class="mq-dot"></span>Taj Mahal, India</span>
+          <span class="mq-item"><span class="mq-dot"></span>Easter Island, Chile</span>
+          <span class="mq-item"><span class="mq-dot"></span>Lascaux Caves, France</span>
+        </div>
+      </div>
+
+      <!-- IMPACT STATS -->
+      <section class="impact-section">
+        <div class="sw">
+          <div class="impact-head">
+            <div class="float-label">✦ By the numbers</div>
+            <h2 class="impact-title">Heritage preservation<br>at <em>global scale</em></h2>
+            <p class="impact-sub">Real numbers. Real stakes. Real urgency.</p>
+          </div>
+          <div class="impact-grid">
+            <div class="impact-card">
+              <div class="ic-float-tag">UNESCO recognized</div>
+              <div class="ic-n">1,121</div>
+              <div class="ic-l">World Heritage Sites</div>
+              <div class="ic-sub">Across 167 countries</div>
+            </div>
+            <div class="impact-card ic-highlight">
+              <div class="ic-float-tag ic-ft-gold">↑ Growing daily</div>
+              <div class="ic-n" id="ic-total">10</div>
+              <div class="ic-l">Assets Archived</div>
+              <div class="ic-sub">And counting</div>
+            </div>
+            <div class="impact-card">
+              <div class="ic-float-tag ic-ft-red">At risk globally</div>
+              <div class="ic-n">65%</div>
+              <div class="ic-l">Sites in Danger</div>
+              <div class="ic-sub">From climate &amp; conflict</div>
+            </div>
+            <div class="impact-card">
+              <div class="ic-float-tag">Worldwide</div>
+              <div class="ic-n">7</div>
+              <div class="ic-l">Regions Covered</div>
+              <div class="ic-sub">Every inhabited continent</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURED -->
       <section class="home-section">
-        <div class="section-head">
-          <h2 class="section-title">Featured Assets</h2>
-          <button class="link-btn" onclick="goPage('archive')">View all →</button>
+        <div class="sw">
+          <div class="section-row">
+            <div>
+              <div class="float-label">✦ Curated picks</div>
+              <h2 class="section-title">Featured Assets</h2>
+            </div>
+            <button class="link-btn" onclick="goPage('archive')">View all →</button>
+          </div>
+          <div id="featured-grid" class="grid"></div>
         </div>
-        <div id="featured-grid" class="grid"></div>
       </section>
 
+      <!-- WHY HERITAGEGUARD -->
+      <section class="features-section">
+        <div class="sw">
+          <div class="feat-head">
+            <div class="float-label">✦ Why HeritageGuard</div>
+            <h2 class="section-title">Built for permanence</h2>
+            <p class="feat-sub">Every decision made with centuries in mind</p>
+          </div>
+          <div class="feat-grid">
+            <div class="feat-card">
+              <div class="fc-icon-row">
+                <span class="fc-icon">☁️</span>
+                <span class="fc-icon-float">Azure backed</span>
+              </div>
+              <h3 class="fc-title">Cloud-Native Storage</h3>
+              <p class="fc-body">Files live in Azure Blob Storage with geo-redundant replication. Metadata in CosmosDB. Your records survive hardware failure, natural disasters, and time itself.</p>
+              <div class="fc-tags">
+                <span class="fc-tag">Blob Storage</span>
+                <span class="fc-tag">CosmosDB</span>
+                <span class="fc-tag">Logic Apps</span>
+              </div>
+            </div>
+            <div class="feat-card feat-card-gold">
+              <div class="fc-icon-row">
+                <span class="fc-icon">🔓</span>
+                <span class="fc-icon-float fc-ft-gold">100% free</span>
+              </div>
+              <h3 class="fc-title">Open Access Research</h3>
+              <p class="fc-body">All archived records are freely accessible to researchers, conservators, and educators worldwide. No paywalls. No subscriptions. Knowledge belongs to everyone.</p>
+              <div class="fc-tags">
+                <span class="fc-tag">Free API</span>
+                <span class="fc-tag">REST</span>
+                <span class="fc-tag">JSON</span>
+              </div>
+            </div>
+            <div class="feat-card">
+              <div class="fc-icon-row">
+                <span class="fc-icon">📦</span>
+                <span class="fc-icon-float">5 formats</span>
+              </div>
+              <h3 class="fc-title">Multi-Format Archive</h3>
+              <p class="fc-body">From high-resolution photography to LiDAR point clouds and photogrammetric 3D models — every preservation format in one place, one search.</p>
+              <div class="fc-tags">
+                <span class="fc-tag">Images</span>
+                <span class="fc-tag">4K Video</span>
+                <span class="fc-tag">3D Scan</span>
+                <span class="fc-tag">LiDAR</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FORMATS -->
       <section class="formats-section">
-        <h2 class="section-title" style="margin-bottom:1.5rem">Supported Formats</h2>
-        <div class="format-cards">
-          <div class="format-card" onclick="goArchiveType('image')">
-            <span class="fmt-icon">📷</span>
-            <span class="fmt-name">Images</span>
-            <span class="fmt-desc">High-resolution photography</span>
+        <div class="sw">
+          <div class="formats-head">
+            <div class="float-label">✦ What we store</div>
+            <h2 class="section-title" style="margin-bottom:1.75rem">Supported Formats</h2>
           </div>
-          <div class="format-card" onclick="goArchiveType('video')">
-            <span class="fmt-icon">🎬</span>
-            <span class="fmt-name">4K Video</span>
-            <span class="fmt-desc">Documentary footage</span>
-          </div>
-          <div class="format-card" onclick="goArchiveType('3dscan')">
-            <span class="fmt-icon">📦</span>
-            <span class="fmt-name">3D Scans</span>
-            <span class="fmt-desc">Photogrammetric models</span>
-          </div>
-          <div class="format-card" onclick="goArchiveType('lidar')">
-            <span class="fmt-icon">🛰</span>
-            <span class="fmt-name">LiDAR</span>
-            <span class="fmt-desc">Point cloud surveys</span>
-          </div>
-          <div class="format-card" onclick="goArchiveType('document')">
-            <span class="fmt-icon">📄</span>
-            <span class="fmt-name">Documents</span>
-            <span class="fmt-desc">Surveys &amp; reports</span>
+          <div class="format-row">
+            <div class="format-tile" onclick="goArchiveType('image')">
+              <div class="ft-icon-wrap"><span class="ft-icon">📷</span></div>
+              <span class="ft-name">Images</span>
+              <span class="ft-desc">High-res photography</span>
+            </div>
+            <div class="format-tile" onclick="goArchiveType('video')">
+              <div class="ft-icon-wrap"><span class="ft-icon">🎬</span></div>
+              <span class="ft-name">4K Video</span>
+              <span class="ft-desc">Documentary footage</span>
+            </div>
+            <div class="format-tile" onclick="goArchiveType('3dscan')">
+              <div class="ft-icon-wrap"><span class="ft-icon">📦</span></div>
+              <span class="ft-name">3D Scans</span>
+              <span class="ft-desc">Photogrammetric models</span>
+            </div>
+            <div class="format-tile" onclick="goArchiveType('lidar')">
+              <div class="ft-icon-wrap"><span class="ft-icon">🛰</span></div>
+              <span class="ft-name">LiDAR</span>
+              <span class="ft-desc">Point cloud surveys</span>
+            </div>
+            <div class="format-tile" onclick="goArchiveType('document')">
+              <div class="ft-icon-wrap"><span class="ft-icon">📄</span></div>
+              <span class="ft-name">Documents</span>
+              <span class="ft-desc">Surveys &amp; reports</span>
+            </div>
           </div>
         </div>
       </section>
 
-    </div>
+      <!-- HOW IT WORKS -->
+      <section class="hiw-section">
+        <div class="sw">
+          <div class="hiw-head">
+            <div class="float-label hiw-fl">✦ Simple process</div>
+            <h2 class="section-title">How it Works</h2>
+            <p class="hiw-sub">Three steps to permanent preservation</p>
+          </div>
+          <div class="hiw-grid">
+            <div class="hiw-item">
+              <div class="hiw-icon-wrap">📸</div>
+              <div class="hiw-num">01</div>
+              <h3 class="hiw-title">Document</h3>
+              <p class="hiw-body">Upload high-fidelity images, 4K video, 3D scans, or LiDAR surveys of endangered sites around the world.</p>
+              <div class="hiw-float-text">Start free →</div>
+            </div>
+            <div class="hiw-arrow">→</div>
+            <div class="hiw-item">
+              <div class="hiw-icon-wrap">☁️</div>
+              <div class="hiw-num">02</div>
+              <h3 class="hiw-title">Preserve</h3>
+              <p class="hiw-body">Files are stored in Azure Blob Storage with geo-redundant replication. Metadata lives in Azure CosmosDB.</p>
+              <div class="hiw-float-text">99.99% uptime</div>
+            </div>
+            <div class="hiw-arrow">→</div>
+            <div class="hiw-item">
+              <div class="hiw-icon-wrap">🔍</div>
+              <div class="hiw-num">03</div>
+              <h3 class="hiw-title">Access</h3>
+              <p class="hiw-body">Researchers and conservators worldwide browse, search, and download preserved records via a REST API.</p>
+              <div class="hiw-float-text">Open forever</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <!-- ════ ARCHIVE ═════════════════════════════ -->
+      <!-- MISSION CTA -->
+      <section class="cta-band">
+        <div class="cta-deco-text cta-dt-1" aria-hidden="true">preserve</div>
+        <div class="cta-deco-text cta-dt-2" aria-hidden="true">document</div>
+        <div class="cta-deco-text cta-dt-3" aria-hidden="true">protect</div>
+        <div class="sw">
+          <div class="cta-inner">
+            <div class="float-label" style="margin-bottom:.75rem">✦ Free to join</div>
+            <h2 class="cta-title">Join the global<br>preservation effort</h2>
+            <p class="cta-body">Create a free contributor account and start documenting endangered heritage sites. Every record matters.</p>
+            <div class="cta-btns">
+              <button class="btn-gold btn-shimmer" onclick="openRegister()">Create free account</button>
+              <button class="btn-outline" onclick="goPage('archive')">Browse the archive</button>
+            </div>
+            <div class="cta-footer-note">
+              <span>✓ No credit card</span>
+              <span class="htn-sep">·</span>
+              <span>✓ Instant access</span>
+              <span class="htn-sep">·</span>
+              <span>✓ Cancel anytime</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /pg-home -->
+
+    <!-- ══════ ARCHIVE ════════════════════════════════ -->
     <div id="pg-archive" class="pg hidden">
-      <div class="pg-top">
+      <div class="pg-header">
         <div>
           <h1 class="pg-title">Archive</h1>
-          <p class="pg-sub">Browse all heritage assets</p>
+          <p class="pg-sub">Browse and search all heritage assets</p>
         </div>
-        <button class="btn-primary" onclick="needAuth()">+ Upload</button>
+        <button class="btn-gold" onclick="needAuth()">+ Upload Asset</button>
       </div>
 
-      <div class="search-block">
+      <div class="search-bar">
         <div class="search-main">
-          <span class="search-ico">⌕</span>
+          <span class="search-icon">⌕</span>
           <input id="sq" type="text" placeholder="Search title, location, description…" oninput="debSearch()"/>
         </div>
-        <input id="sl" class="search-sm" type="text" placeholder="Location…" oninput="debSearch()"/>
-        <input id="st" class="search-sm" type="text" placeholder="Tag…"      oninput="debSearch()"/>
+        <input id="sl" class="search-pill" type="text" placeholder="Location…" oninput="debSearch()"/>
+        <input id="st" class="search-pill" type="text" placeholder="Tag…"      oninput="debSearch()"/>
         <button class="btn-clear" onclick="clearSearch()">Clear</button>
       </div>
 
-      <div class="type-pills">
-        <button class="tp active" data-t=""         onclick="setType(this,'')">All</button>
-        <button class="tp"        data-t="image"    onclick="setType(this,'image')">📷 Images</button>
-        <button class="tp"        data-t="video"    onclick="setType(this,'video')">🎬 Video</button>
-        <button class="tp"        data-t="3dscan"   onclick="setType(this,'3dscan')">📦 3D Scans</button>
-        <button class="tp"        data-t="lidar"    onclick="setType(this,'lidar')">🛰 LiDAR</button>
-        <button class="tp"        data-t="document" onclick="setType(this,'document')">📄 Documents</button>
+      <div class="filter-row">
+        <div class="type-pills">
+          <button class="tp active" data-t=""         onclick="setType(this,'')">All</button>
+          <button class="tp"        data-t="image"    onclick="setType(this,'image')">📷 Images</button>
+          <button class="tp"        data-t="video"    onclick="setType(this,'video')">🎬 Video</button>
+          <button class="tp"        data-t="3dscan"   onclick="setType(this,'3dscan')">📦 3D Scans</button>
+          <button class="tp"        data-t="lidar"    onclick="setType(this,'lidar')">🛰 LiDAR</button>
+          <button class="tp"        data-t="document" onclick="setType(this,'document')">📄 Documents</button>
+        </div>
+        <div class="archive-tools">
+          <select id="sort-sel" class="sort-sel" onchange="applyFilters()">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+            <option value="title">Title A–Z</option>
+            <option value="type">By type</option>
+            <option value="region">By region</option>
+          </select>
+          <div class="view-toggle">
+            <button class="vt active" id="vb-grid" onclick="setView('grid')" title="Grid view">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="0" width="6" height="6" rx="1.2"/><rect x="8" y="0" width="6" height="6" rx="1.2"/><rect x="0" y="8" width="6" height="6" rx="1.2"/><rect x="8" y="8" width="6" height="6" rx="1.2"/></svg>
+            </button>
+            <button class="vt" id="vb-list" onclick="setView('list')" title="List view">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="0" y="1" width="14" height="2.2" rx="1.1"/><rect x="0" y="6" width="14" height="2.2" rx="1.1"/><rect x="0" y="11" width="14" height="2.2" rx="1.1"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       <p id="res-count" class="res-count"></p>
@@ -172,77 +480,134 @@
       <div id="no-results" class="empty-state hidden">
         <span class="empty-icon">◎</span>
         <p>No assets match your search.</p>
-        <button class="btn-ghost" onclick="clearSearch()">Clear filters</button>
+        <button class="btn-outline" onclick="clearSearch()">Clear filters</button>
       </div>
+      <div id="pagination"></div>
     </div>
 
-    <!-- ════ DETAIL ══════════════════════════════ -->
+    <!-- ══════ DETAIL ═════════════════════════════════ -->
     <div id="pg-detail" class="pg hidden">
-      <div class="detail-top">
+      <div class="det-nav">
         <button class="back-btn" id="det-back">← Back</button>
-        <div id="det-acts" class="hidden det-act-row">
-          <button class="btn-ghost" onclick="openEditPg()">Edit</button>
-          <button class="btn-red-sm" onclick="confirmDelAsset()">Delete</button>
+        <div class="det-nav-right">
+          <button class="btn-sm-outline" onclick="shareAsset()">↗ Share</button>
+          <button class="btn-sm-outline" onclick="downloadAsset()">↓ Download</button>
+          <div id="det-acts" class="hidden" style="display:flex;gap:.4rem">
+            <button class="btn-sm-outline" onclick="openEditPg()">Edit</button>
+            <button class="btn-danger-sm"  onclick="confirmDelAsset()">Delete</button>
+          </div>
         </div>
       </div>
       <div id="det-body"></div>
+      <div id="det-related" class="hidden">
+        <h3 class="det-related-label">Related Assets</h3>
+        <div id="related-grid" class="grid"></div>
+      </div>
     </div>
 
-    <!-- ════ LOGIN ════════════════════════════════ -->
+    <!-- ══════ LOGIN ══════════════════════════════════ -->
     <div id="pg-login" class="pg hidden">
-      <div class="auth-wrap">
-        <div class="auth-card">
-          <div class="auth-logo">
-            <div class="logo-mark">HG</div>
-            <span class="logo-name">Heritage<span class="logo-accent">Guard</span></span>
-          </div>
-          <h2 class="auth-title">Welcome back</h2>
-          <p class="auth-sub">Sign in to contribute to the global archive</p>
+      <div class="auth-split">
 
-          <div class="auth-tabs">
-            <button class="at active" id="at-in"  onclick="authTab('in')">Sign in</button>
-            <button class="at"        id="at-reg" onclick="authTab('reg')">Register</button>
-          </div>
-
-          <!-- SIGN IN -->
-          <div id="f-in">
-            <div class="field"><label>Email address</label><input type="email" id="in-em" placeholder="your@email.com"/></div>
-            <div class="field"><label>Password</label><input type="password" id="in-pw" placeholder="••••••••"/></div>
-            <button class="btn-primary w100" onclick="doLogin()">Sign in</button>
-
-          </div>
-
-          <!-- REGISTER -->
-          <div id="f-reg" class="hidden">
-            <div class="field-row">
-              <div class="field"><label>First name <r>*</r></label><input type="text" id="rg-fn" placeholder="Deepak"/></div>
-              <div class="field"><label>Last name <r>*</r></label><input type="text" id="rg-ln" placeholder="Pokhrel"/></div>
+        <!-- LEFT DECORATIVE PANEL -->
+        <div class="auth-left">
+          <div class="auth-left-inner">
+            <div class="auth-left-logo" onclick="goPage('home')">
+              <div class="logo-mark"><span>HG</span></div>
+              <span class="logo-name">Heritage<span class="logo-accent">Guard</span></span>
             </div>
-            <div class="field"><label>Email <r>*</r></label><input type="email" id="rg-em" placeholder="your@email.com"/></div>
-            <div class="field"><label>Password <r>*</r></label><input type="password" id="rg-pw" placeholder="Min. 8 characters"/></div>
-            <div class="field"><label>Organisation <span class="opt">optional</span></label><input type="text" id="rg-org" placeholder="e.g. UNESCO, British Museum"/></div>
-            <button class="btn-primary w100" onclick="doRegister()">Create account</button>
+            <h2 class="auth-left-heading">Preserving what the world<br><em>must never lose</em></h2>
+            <p class="auth-left-body">Join researchers, conservators, and institutions contributing to the global cultural heritage archive.</p>
+            <div class="auth-left-stats">
+              <div class="als-item">
+                <span class="als-n">25+</span>
+                <span class="als-l">Assets archived</span>
+              </div>
+              <div class="als-sep"></div>
+              <div class="als-item">
+                <span class="als-n">7</span>
+                <span class="als-l">Regions covered</span>
+              </div>
+              <div class="als-sep"></div>
+              <div class="als-item">
+                <span class="als-n">100%</span>
+                <span class="als-l">Open access</span>
+              </div>
+            </div>
+            <div class="auth-left-badges">
+              <span class="alb">☁️ Azure Backed</span>
+              <span class="alb">🏛️ UNESCO Aligned</span>
+              <span class="alb">🔒 Secure</span>
+            </div>
+            <blockquote class="auth-left-quote">
+              <p>"Digital preservation is the final frontier of conservation."</p>
+              <cite>— UNESCO Digital Heritage Report 2025</cite>
+            </blockquote>
           </div>
         </div>
+
+        <!-- RIGHT FORM PANEL -->
+        <div class="auth-right">
+          <div class="auth-card">
+            <div class="auth-brand">
+              <div class="logo-mark"><span>HG</span></div>
+              <span class="auth-brand-name">Heritage<span>Guard</span></span>
+            </div>
+
+            <div class="auth-tabs">
+              <button class="at active" id="at-in"  onclick="authTab('in')">Sign in</button>
+              <button class="at"        id="at-reg" onclick="authTab('reg')">Register</button>
+            </div>
+
+            <!-- SIGN IN -->
+            <div id="f-in">
+              <h2 class="auth-heading">Welcome back</h2>
+              <p class="auth-sub">Sign in to contribute to the global archive</p>
+              <div class="field"><label>Email address</label><input type="email" id="in-em" placeholder="your@email.com"/></div>
+              <div class="field"><label>Password</label><input type="password" id="in-pw" placeholder="••••••••"/></div>
+              <button class="btn-gold w100" onclick="doLogin()">Sign in →</button>
+              <div class="auth-demo-row">
+                <span class="auth-demo-label">Demo accounts:</span>
+                <button class="auth-demo-btn" onclick="fillDemo('admin@heritaguard.org','admin1234')">Admin</button>
+                <button class="auth-demo-btn" onclick="fillDemo('contributor@heritaguard.org','demo1234')">Contributor</button>
+              </div>
+            </div>
+
+            <!-- REGISTER -->
+            <div id="f-reg" class="hidden">
+              <h2 class="auth-heading">Create account</h2>
+              <p class="auth-sub">Start contributing to the global archive</p>
+              <div class="field-row">
+                <div class="field"><label>First name <r>*</r></label><input type="text" id="rg-fn" placeholder="First name"/></div>
+                <div class="field"><label>Last name <r>*</r></label><input type="text" id="rg-ln" placeholder="Last name"/></div>
+              </div>
+              <div class="field"><label>Email <r>*</r></label><input type="email" id="rg-em" placeholder="your@email.com"/></div>
+              <div class="field"><label>Password <r>*</r></label><input type="password" id="rg-pw" placeholder="Min. 8 characters"/></div>
+              <div class="field"><label>Organisation <span class="opt">optional</span></label><input type="text" id="rg-org" placeholder="e.g. UNESCO, British Museum"/></div>
+              <button class="btn-gold w100" onclick="doRegister()">Create account →</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
 
-    <!-- ════ UPLOAD ═══════════════════════════════ -->
+    <!-- ══════ UPLOAD ═════════════════════════════════ -->
     <div id="pg-upload" class="pg hidden">
-      <div class="pg-top">
-        <div><h1 class="pg-title">Upload Asset</h1><p class="pg-sub">Add a new asset to the preservation archive</p></div>
-        <button class="btn-ghost" onclick="goPage('archive')">Cancel</button>
+      <div class="pg-header">
+        <div><h1 class="pg-title">Upload Asset</h1><p class="pg-sub">Add a new record to the preservation archive</p></div>
+        <button class="btn-outline" onclick="goPage('archive')">Cancel</button>
       </div>
-      <div class="two-col">
-        <div class="col-main">
+      <div class="form-layout">
+        <div class="form-main">
           <div class="fblock">
-            <h3 class="fblock-title">Asset Details</h3>
+            <h3 class="fblock-label">Asset Details</h3>
             <div class="field"><label>Title <r>*</r></label><input type="text" id="u-ti" placeholder="e.g. Machu Picchu — South Wall Stonework"/></div>
             <div class="field"><label>Description</label><textarea id="u-de" rows="4" placeholder="Historical significance, current condition, preservation urgency…"></textarea></div>
             <div class="field-row">
               <div class="field"><label>Location <r>*</r></label><input type="text" id="u-lo" placeholder="e.g. Cusco, Peru"/></div>
               <div class="field"><label>Region <r>*</r></label>
-                <select id="u-re"><option value="">Select…</option>
+                <select id="u-re"><option value="">Select region…</option>
                   <option>Africa</option><option>Asia</option><option>Europe</option>
                   <option>Middle East</option><option>North America</option>
                   <option>Oceania</option><option>South America</option>
@@ -251,8 +616,7 @@
             </div>
             <div class="field-row">
               <div class="field"><label>Media Type <r>*</r></label>
-                <select id="u-ty" onchange="chkSpecs(this.value)">
-                  <option value="">Select…</option>
+                <select id="u-ty" onchange="chkSpecs(this.value)"><option value="">Select type…</option>
                   <option value="image">📷 Image</option>
                   <option value="video">🎬 4K Video</option>
                   <option value="3dscan">📦 3D Scan</option>
@@ -265,7 +629,7 @@
           </div>
 
           <div class="fblock hidden" id="spec-card">
-            <h3 class="fblock-title">Technical Specifications</h3>
+            <h3 class="fblock-label">Technical Specifications</h3>
             <div class="field-row">
               <div class="field"><label>Accuracy / Resolution</label><input type="text" id="u-ac" placeholder="e.g. 2mm / 50,000 pts/m²"/></div>
               <div class="field"><label>Capture Method</label><input type="text" id="u-me" placeholder="e.g. Drone LiDAR"/></div>
@@ -274,34 +638,38 @@
           </div>
 
           <div class="fblock">
-            <h3 class="fblock-title">File Upload</h3>
+            <h3 class="fblock-label">File Upload</h3>
             <div class="file-zone" id="fzone" onclick="document.getElementById('u-fi').click()">
               <input type="file" id="u-fi" style="display:none" accept="image/*,video/*,.pdf,.obj,.ply,.glb,.las,.laz,.pts" onchange="onFilePick(this)"/>
               <div id="fzone-ui">
-                <div class="fzone-arrow">↑</div>
-                <p class="fzone-main">Click to choose file</p>
-                <p class="fzone-sub">Images · 4K Video · 3D Scans · LiDAR · PDF</p>
+                <div class="fzone-icon">↑</div>
+                <p class="fzone-main">Drag & drop or click to upload</p>
+                <p class="fzone-sub">Images · 4K Video · 3D Scans (.obj/.glb) · LiDAR (.las/.laz) · PDF</p>
               </div>
             </div>
           </div>
         </div>
-        <div class="col-side">
-          <button class="btn-primary w100" onclick="doUpload()">Upload Asset</button>
-          <button class="btn-ghost   w100" onclick="goPage('archive')">Cancel</button>
+        <div class="form-side">
+          <button class="btn-gold w100" onclick="doUpload()">Upload Asset</button>
+          <button class="btn-outline w100" onclick="goPage('archive')">Cancel</button>
+          <div class="side-note">
+            <p class="side-note-title">Azure Storage</p>
+            <p class="side-note-body">Files are stored in Azure Blob Storage. Metadata is saved to CosmosDB via Logic Apps REST API.</p>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- ════ EDIT ══════════════════════════════════ -->
+    <!-- ══════ EDIT ════════════════════════════════════ -->
     <div id="pg-edit" class="pg hidden">
-      <div class="pg-top">
+      <div class="pg-header">
         <div><h1 class="pg-title">Edit Asset</h1></div>
-        <button class="btn-ghost" onclick="goPage('detail')">Cancel</button>
+        <button class="btn-outline" onclick="goPage('detail')">Cancel</button>
       </div>
-      <div class="two-col">
-        <div class="col-main">
+      <div class="form-layout">
+        <div class="form-main">
           <div class="fblock">
-            <h3 class="fblock-title">Asset Details</h3>
+            <h3 class="fblock-label">Asset Details</h3>
             <div class="field"><label>Title <r>*</r></label><input type="text" id="e-ti"/></div>
             <div class="field"><label>Description</label><textarea id="e-de" rows="4"></textarea></div>
             <div class="field-row">
@@ -326,18 +694,18 @@
             </div>
           </div>
         </div>
-        <div class="col-side">
-          <button class="btn-primary w100" onclick="doUpdate()">Save Changes</button>
-          <button class="btn-red    w100" onclick="confirmDelAsset()">Delete Asset</button>
-          <button class="btn-ghost  w100" onclick="goPage('detail')">Cancel</button>
+        <div class="form-side">
+          <button class="btn-gold w100" onclick="doUpdate()">Save Changes</button>
+          <button class="btn-danger-full w100" onclick="confirmDelAsset()">Delete Asset</button>
+          <button class="btn-outline w100" onclick="goPage('detail')">Cancel</button>
         </div>
       </div>
     </div>
 
-    <!-- ════ PROFILE ══════════════════════════════ -->
+    <!-- ══════ PROFILE ════════════════════════════════ -->
     <div id="pg-profile" class="pg hidden">
-      <div class="pg-top">
-        <div><h1 class="pg-title">My Profile</h1><p class="pg-sub">Manage your account details</p></div>
+      <div class="pg-header">
+        <div><h1 class="pg-title">My Profile</h1><p class="pg-sub">Manage your account</p></div>
       </div>
       <div class="profile-layout">
         <aside class="profile-aside">
@@ -349,30 +717,30 @@
           </div>
           <div class="profile-stats">
             <div class="pstat"><span class="pstat-n" id="p-count">0</span><span class="pstat-l">Uploads</span></div>
-            <div class="pstat-div"></div>
+            <div class="pstat-sep"></div>
             <div class="pstat"><span class="pstat-n" id="p-joined">—</span><span class="pstat-l">Member since</span></div>
           </div>
         </aside>
         <div class="profile-main">
           <div class="fblock">
-            <h3 class="fblock-title">Personal Information</h3>
+            <h3 class="fblock-label">Personal Information</h3>
             <div class="field-row">
               <div class="field"><label>First name</label><input type="text" id="p-fn"/></div>
               <div class="field"><label>Last name</label><input type="text" id="p-ln"/></div>
             </div>
             <div class="field"><label>Email address</label><input type="email" id="p-em"/></div>
             <div class="field"><label>Organisation</label><input type="text" id="p-org"/></div>
-            <button class="btn-primary" onclick="saveProfile()">Save Changes</button>
+            <button class="btn-gold" onclick="saveProfile()">Save Changes</button>
           </div>
           <div class="fblock">
-            <h3 class="fblock-title">Change Password</h3>
+            <h3 class="fblock-label">Change Password</h3>
             <div class="field"><label>Current password</label><input type="password" id="p-cp" placeholder="••••••••"/></div>
             <div class="field"><label>New password</label><input type="password" id="p-np" placeholder="Min. 8 characters"/></div>
             <div class="field"><label>Confirm new password</label><input type="password" id="p-np2" placeholder="Repeat new password"/></div>
-            <button class="btn-primary" onclick="changePass()">Update Password</button>
+            <button class="btn-gold" onclick="changePass()">Update Password</button>
           </div>
           <div class="fblock">
-            <h3 class="fblock-title">My Uploads</h3>
+            <h3 class="fblock-label">My Uploads</h3>
             <div id="my-grid" class="grid"></div>
             <p id="no-mine" class="empty-p hidden">You have not uploaded any assets yet.</p>
           </div>
@@ -380,28 +748,32 @@
       </div>
     </div>
 
-    <!-- ════ ADMIN ════════════════════════════════ -->
+    <!-- ══════ ADMIN ═══════════════════════════════════ -->
     <div id="pg-admin" class="pg hidden">
-      <div class="pg-top">
+      <div class="pg-header">
         <div><h1 class="pg-title">Admin Panel</h1><p class="pg-sub">Manage users and assets</p></div>
       </div>
       <div class="admin-tabs">
-        <button class="admin-tab active" id="adt-u" onclick="adminTab('u')">Users <span class="adt-badge" id="ub">—</span></button>
-        <button class="admin-tab"        id="adt-a" onclick="adminTab('a')">Assets <span class="adt-badge" id="ab">—</span></button>
+        <button class="admin-tab active" id="adt-u" onclick="adminTab('u')">Users <span class="tab-badge" id="ub">—</span></button>
+        <button class="admin-tab"        id="adt-a" onclick="adminTab('a')">Assets <span class="tab-badge" id="ab">—</span></button>
       </div>
       <div id="adv-u">
-        <div class="table-card">
+        <div class="table-wrap">
           <div class="tscroll">
-            <table class="dtbl"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Organisation</th><th>Joined</th><th></th></tr></thead>
-            <tbody id="t-users"></tbody></table>
+            <table class="dtbl">
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Organisation</th><th>Joined</th><th></th></tr></thead>
+              <tbody id="t-users"></tbody>
+            </table>
           </div>
         </div>
       </div>
       <div id="adv-a" class="hidden">
-        <div class="table-card">
+        <div class="table-wrap">
           <div class="tscroll">
-            <table class="dtbl"><thead><tr><th>Title</th><th>Type</th><th>Location</th><th>Uploaded by</th><th>Date</th><th></th></tr></thead>
-            <tbody id="t-assets"></tbody></table>
+            <table class="dtbl">
+              <thead><tr><th>Title</th><th>Type</th><th>Location</th><th>Uploaded by</th><th>Date</th><th></th></tr></thead>
+              <tbody id="t-assets"></tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -411,8 +783,24 @@
 
   <footer>
     <div class="foot-inner">
-      <div class="foot-brand">Heritage<span>Guard</span></div>
-      <div class="foot-copy">© 2026 HeritageGuard · Preserving cultural heritage for future generations</div>
+      <div class="foot-brand">
+        <div class="foot-logo">Heritage<span>Guard</span></div>
+        <p class="foot-copy">© 2026 HeritageGuard · Preserving cultural heritage for future generations</p>
+      </div>
+      <nav class="foot-nav">
+        <button class="foot-link" onclick="goPage('home')">Home</button>
+        <button class="foot-link" onclick="goPage('archive')">Archive</button>
+        <button class="foot-link" onclick="goPage('login')">Sign in</button>
+        <button class="foot-link" onclick="openRegister()">Register</button>
+      </nav>
+      <div class="foot-tech">
+        <p class="foot-tech-label">Powered by</p>
+        <div class="foot-badges">
+          <span class="foot-badge">Azure Blob</span>
+          <span class="foot-badge">Logic Apps</span>
+          <span class="foot-badge">CosmosDB</span>
+        </div>
+      </div>
     </div>
   </footer>
 

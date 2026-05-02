@@ -9,27 +9,35 @@ let USERS = [
 const TL = { image:'Image', video:'4K Video', '3dscan':'3D Scan', lidar:'LiDAR Survey', document:'Document' }
 const TI = { image:'🖼️', video:'🎬', '3dscan':'📦', lidar:'🛰', document:'📄' }
 
-let ASSETS=[],me=null,curPage='home',prevPage='home',curAsset=null,typeFilter='',stimer=null,modalCb=null,USE_LIVE=false
+let ASSETS=[],me=null,curPage='home',prevPage='home',curAsset=null,typeFilter='',stimer=null,modalCb=null,USE_LIVE=false,curView='grid',countersAnimated=false,archivePage=1
+const PAGE_SIZE=8
 
 /* BOOT */
 async function boot(){
+  history.replaceState({page:'home'},'','#home')
+  goPage('home',false)
+  renderSkeletons('featured-grid',4)
   try{ASSETS=USE_LIVE?await getAllAssets():await fetch('assets.json').then(r=>r.json())}catch(e){ASSETS=[];console.warn(e)}
   renderFeatured()
   const el=document.getElementById('home-total');if(el)el.textContent=ASSETS.length
+  const el2=document.getElementById('ic-total');if(el2)el2.textContent=ASSETS.length
+  initCounters()
 }
 
 /* NAVIGATION */
-function goPage(n){
+function goPage(n,push=true){
   document.querySelectorAll('.pg').forEach(p=>p.classList.add('hidden'))
   const pg=document.getElementById('pg-'+n);if(pg)pg.classList.remove('hidden')
   document.querySelectorAll('.nl').forEach(b=>b.classList.remove('active'))
   const nb=document.getElementById('nl-'+n);if(nb)nb.classList.add('active')
   prevPage=curPage;curPage=n
+  if(push)history.pushState({page:n},'','#'+n)
   window.scrollTo({top:0,behavior:'smooth'})
   if(n==='archive')renderArchive()
   if(n==='admin')renderAdmin()
-  if(n==='home')renderFeatured()
+  if(n==='home'){renderFeatured();if(!countersAnimated)initCounters()}
   if(n==='profile')renderProfile()
+  if(n==='upload')setTimeout(initDragDrop,50)
 }
 function openRegister(){goPage('login');authTab('reg')}
 function needAuth(){if(!me){toast('Please sign in to upload assets.','warn');goPage('login');return}if(me.role==='viewer'){toast('Your account does not have upload permission.','warn');return}goPage('upload')}
@@ -64,20 +72,52 @@ function applyFilters(){
   const q=(document.getElementById('sq')?.value||'').trim().toLowerCase()
   const loc=(document.getElementById('sl')?.value||'').trim().toLowerCase()
   const tag=(document.getElementById('st')?.value||'').trim().toLowerCase()
+  const sort=(document.getElementById('sort-sel')?.value||'newest')
   let res=[...ASSETS]
   if(typeFilter)res=res.filter(a=>a.type===typeFilter)
   if(loc)res=res.filter(a=>(a.location||'').toLowerCase().includes(loc)||(a.region||'').toLowerCase().includes(loc))
   if(tag)res=res.filter(a=>(a.tags||[]).some(t=>t.toLowerCase().includes(tag)))
   if(q)res=res.filter(a=>(a.title||'').toLowerCase().includes(q)||(a.location||'').toLowerCase().includes(q)||(a.description||'').toLowerCase().includes(q)||(a.tags||[]).some(t=>t.toLowerCase().includes(q))||(a.aiTags||[]).some(t=>t.toLowerCase().includes(q)))
+  if(sort==='oldest')res.sort((a,b)=>(a.uploadedAt||'').localeCompare(b.uploadedAt||''))
+  else if(sort==='newest')res.sort((a,b)=>(b.uploadedAt||'').localeCompare(a.uploadedAt||''))
+  else if(sort==='title')res.sort((a,b)=>(a.title||'').localeCompare(b.title||''))
+  else if(sort==='type')res.sort((a,b)=>(a.type||'').localeCompare(b.type||''))
+  else if(sort==='region')res.sort((a,b)=>(a.region||'').localeCompare(b.region||''))
   const grid=document.getElementById('archive-grid'),none=document.getElementById('no-results'),cnt=document.getElementById('res-count')
   if(!grid)return
-  cnt.textContent=res.length+' asset'+(res.length!==1?'s':'')+' found'
-  if(!res.length){grid.innerHTML='';none.classList.remove('hidden');return}
-  none.classList.add('hidden');grid.innerHTML=res.map((a,i)=>cardHTML(a,i)).join('')
+  const total=res.length
+  const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE))
+  if(archivePage>totalPages)archivePage=totalPages
+  const start=(archivePage-1)*PAGE_SIZE
+  const pageRes=res.slice(start,start+PAGE_SIZE)
+  cnt.textContent=`${total} asset${total!==1?'s':''} found · Page ${archivePage} of ${totalPages}`
+  if(!total){grid.innerHTML='';none.classList.remove('hidden');renderPagination(1,1,true);return}
+  none.classList.add('hidden')
+  grid.className='grid'+(curView==='list'?' list-view':'')
+  grid.innerHTML=pageRes.map((a,i)=>cardHTML(a,i)).join('')
+  renderPagination(archivePage,totalPages,false)
 }
-function debSearch(){clearTimeout(stimer);stimer=setTimeout(applyFilters,250)}
-function setType(btn,t){document.querySelectorAll('.tp').forEach(b=>b.classList.remove('active'));btn.classList.add('active');typeFilter=t;applyFilters()}
-function clearSearch(){['sq','sl','st'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});typeFilter='';document.querySelectorAll('.tp').forEach(b=>b.classList.remove('active'));const all=document.querySelector('.tp[data-t=""]');if(all)all.classList.add('active');applyFilters()}
+function renderPagination(current,total,hide){
+  const el=document.getElementById('pagination')
+  if(!el)return
+  if(hide||total<=1){el.innerHTML='';return}
+  const start=Math.max(1,current-2),end=Math.min(total,current+2)
+  let html=`<div class="pgn"><button class="pgn-btn pgn-arrow" onclick="setArchivePage(${current-1})" ${current===1?'disabled':''}>← Prev</button><div class="pgn-pages">`
+  if(start>1){html+=`<button class="pgn-btn pgn-num" onclick="setArchivePage(1)">1</button>`; if(start>2)html+=`<span class="pgn-dots">…</span>`}
+  for(let i=start;i<=end;i++)html+=`<button class="pgn-btn pgn-num${i===current?' active':''}" onclick="setArchivePage(${i})">${i}</button>`
+  if(end<total){if(end<total-1)html+=`<span class="pgn-dots">…</span>`;html+=`<button class="pgn-btn pgn-num" onclick="setArchivePage(${total})">${total}</button>`}
+  html+=`</div><button class="pgn-btn pgn-arrow" onclick="setArchivePage(${current+1})" ${current===total?'disabled':''}>Next →</button></div>`
+  el.innerHTML=html
+}
+function setArchivePage(n){
+  if(n<1)return
+  archivePage=n
+  applyFilters()
+  document.getElementById('pg-archive')?.scrollIntoView({behavior:'smooth',block:'start'})
+}
+function debSearch(){archivePage=1;clearTimeout(stimer);stimer=setTimeout(applyFilters,250)}
+function setType(btn,t){archivePage=1;document.querySelectorAll('.tp').forEach(b=>b.classList.remove('active'));btn.classList.add('active');typeFilter=t;applyFilters()}
+function clearSearch(){archivePage=1;['sq','sl','st'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});typeFilter='';document.querySelectorAll('.tp').forEach(b=>b.classList.remove('active'));const all=document.querySelector('.tp[data-t=""]');if(all)all.classList.add('active');applyFilters()}
 
 /* CARD HTML */
 function cardHTML(a,i){
@@ -86,30 +126,57 @@ function cardHTML(a,i){
   const thumb=a.thumbnail?`<img src="${a.thumbnail}" alt="${esc(a.title)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:'';
   const fb=`<div style="display:${a.thumbnail?'none':'flex'};width:100%;height:100%;align-items:center;justify-content:center;font-size:2.6rem">${icon}</div>`
   const canAct=me&&(me.id===a.uploadedBy||me.role==='admin')
-  const acts=canAct?`<button class="btn-ghost btn-sm" onclick="event.stopPropagation();editFromCard('${a.id}')">Edit</button><button class="btn-red-sm btn-sm" onclick="event.stopPropagation();delFromCard('${a.id}','${esc(a.title)}')">Delete</button>`:''
-  return`<div class="card" style="animation-delay:${i*.04}s" onclick="openDetail('${a.id}')"><div class="card-thumb">${thumb}${fb}<div class="card-type-badge">${label}</div></div><div class="card-body"><div class="card-meta"><span></span><span class="card-date">${a.uploadedAt||''}</span></div><div class="card-title">${a.title||''}</div><div class="card-loc">${a.location||''}</div><div class="card-acts"><button class="btn-ghost btn-sm" onclick="event.stopPropagation();openDetail('${a.id}')">View</button>${acts}</div></div></div>`
+  const acts=canAct?`<button class="btn-sm-outline btn-sm" onclick="event.stopPropagation();editFromCard('${a.id}')">Edit</button><button class="btn-danger-sm btn-sm" onclick="event.stopPropagation();delFromCard('${a.id}','${esc(a.title)}')">Delete</button>`:''
+  return`<div class="card" style="animation-delay:${i*.04}s" onclick="openDetail('${a.id}')"><div class="card-thumb">${thumb}${fb}<div class="card-type-badge">${label}</div></div><div class="card-body"><div class="card-meta"><span></span><span class="card-date">${a.uploadedAt||''}</span></div><div class="card-title">${a.title||''}</div><div class="card-loc">${a.location||''}</div><div class="card-acts"><button class="btn-sm-outline btn-sm" onclick="event.stopPropagation();openDetail('${a.id}')">View</button>${acts}</div></div></div>`
 }
 
 /* DETAIL */
-function openDetail(id){
+function openDetail(id,push=true){
   const a=ASSETS.find(x=>x.id===id);if(!a)return;curAsset=a
   const back=document.getElementById('det-back');back.onclick=()=>goPage(prevPage==='detail'?'archive':prevPage)
   const canAct=me&&(me.id===a.uploadedBy||me.role==='admin')
   document.getElementById('det-acts').classList.toggle('hidden',!canAct)
-  renderDetBody(a);goPage('detail')
+  renderDetBody(a)
+  renderRelated(a)
+  goPage('detail',push)
+  if(push)history.replaceState({page:'detail',id},'','#detail-'+id)
 }
 function renderDetBody(a){
   const icon=TI[a.type]||'📁',label=TL[a.type]||a.type
-  const media=a.thumbnail?`<img class="det-img" src="${a.thumbnail}" alt="${a.title}" onerror="this.outerHTML='<div class=\\'det-ph\\'>${icon}</div>'">`:`<div class="det-ph">${icon}</div>`
+  let media
+  if(a.type==='video'){
+    const dur=a.specs?.Duration?`<span class="dvp-dur">${a.specs.Duration}</span>`:''
+    media=`<div class="det-video-wrap" id="det-video-wrap">
+      ${a.thumbnail?`<img class="det-video-poster" src="${a.thumbnail}" alt="${a.title}"/>`:''}
+      <div class="det-play-overlay" onclick="playVideo()">
+        <div class="det-play-btn"><svg width="28" height="28" viewBox="0 0 28 28" fill="white"><polygon points="8,4 24,14 8,24"/></svg></div>
+        <div class="det-video-meta">${dur}<span class="dvp-label">🎬 Click to play</span></div>
+      </div>
+    </div>`
+  } else if(a.thumbnail){
+    media=`<img class="det-img" src="${a.thumbnail}" alt="${a.title}" onerror="this.outerHTML='<div class=\\'det-ph\\'>${icon}</div>'">`
+  } else {
+    media=`<div class="det-ph">${icon}</div>`
+  }
   const tagsHTML=(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')
   const specsHTML=a.specs&&Object.keys(a.specs).length?`<div class="det-block"><div class="det-block-label">${label} Specifications</div><div class="spec-grid">${Object.entries(a.specs).map(([k,v])=>`<div class="si"><span class="si-v">${v}</span><span class="si-k">${k}</span></div>`).join('')}</div></div>`:''
   const aiHTML=(a.aiTags||[]).length?`<div class="det-block"><div class="det-block-label">Auto-generated tags</div><div class="tags">${(a.aiTags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`:''
   document.getElementById('det-body').innerHTML=`${media}<div class="det-eyebrow">${label} · ${a.uploadedAt||'—'} · by ${a.uploadedByName||'—'}</div><h1 class="det-title">${a.title||''}</h1><div class="det-metas"><div class="dm"><span class="dm-l">Location</span><span class="dm-v">${a.location||'—'}</span></div><div class="dm"><span class="dm-l">Region</span><span class="dm-v">${a.region||'—'}</span></div><div class="dm"><span class="dm-l">Type</span><span class="dm-v">${label}</span></div><div class="dm"><span class="dm-l">Uploaded by</span><span class="dm-v">${a.uploadedByName||'—'}</span></div></div><p class="det-desc">${a.description||'No description provided.'}</p><div class="tags">${tagsHTML}</div>${specsHTML}${aiHTML}`
 }
+function playVideo(){
+  if(!curAsset)return
+  const wrap=document.getElementById('det-video-wrap')
+  if(!wrap)return
+  if(curAsset.videoUrl){
+    wrap.innerHTML=`<iframe class="det-video-frame" src="${curAsset.videoUrl}?autoplay=1&rel=0&modestbranding=1" frameborder="0" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>`
+  } else {
+    wrap.innerHTML=`<div class="det-video-unavail"><div class="dvu-icon">🎬</div><p class="dvu-title">Streamed via Azure Media Services</p><p class="dvu-sub">This ${curAsset.specs?.Duration||''} documentary is stored in Azure Blob Storage and streamed on demand. Connect the Azure Media Services endpoint in config.js to enable playback.</p><button class="btn-outline" onclick="toast('Stream access request sent.','success')">Request Access</button></div>`
+  }
+}
 
 /* AUTH */
 function authTab(t){document.getElementById('f-in').classList.toggle('hidden',t!=='in');document.getElementById('f-reg').classList.toggle('hidden',t!=='reg');document.getElementById('at-in').classList.toggle('active',t==='in');document.getElementById('at-reg').classList.toggle('active',t==='reg')}
-function fillDemo(e,p){document.getElementById('in-em').value=e;document.getElementById('in-pw').value=p}
+function fillDemo(e,p){authTab('in');document.getElementById('in-em').value=e;document.getElementById('in-pw').value=p;toast('Demo credentials filled — click Sign in','success')}
 function doLogin(){
   const email=document.getElementById('in-em').value.trim(),pw=document.getElementById('in-pw').value
   if(!email||!pw){toast('Please enter your email and password.','error');return}
@@ -138,7 +205,17 @@ function doLogout(){me=null;document.getElementById('nav-guest').classList.remov
 function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
 function onFilePick(input){
   const drop=document.getElementById('fzone'),ui=document.getElementById('fzone-ui')
-  if(input.files&&input.files[0]){const f=input.files[0];drop.classList.add('ok');ui.innerHTML=`<div class="fzone-arrow" style="color:var(--green)">✓</div><p class="fzone-main">${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB</p>`}
+  if(input.files&&input.files[0]){
+    const f=input.files[0]
+    drop.classList.add('ok')
+    if(f.type.startsWith('image/')){
+      const reader=new FileReader()
+      reader.onload=e=>{ui.innerHTML=`<img src="${e.target.result}" style="max-height:160px;border-radius:8px;object-fit:cover;width:100%;margin-bottom:.6rem"/><p class="fzone-main" style="color:var(--gr)">✓ ${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · Click to change</p>`}
+      reader.readAsDataURL(f)
+    }else{
+      ui.innerHTML=`<div class="fzone-icon" style="color:var(--gr)">✓</div><p class="fzone-main">${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · Click to change</p>`
+    }
+  }
 }
 function doUpload(){
   if(!me){toast('Please sign in first.','error');return}
@@ -154,7 +231,7 @@ function doUpload(){
     toast('Asset uploaded successfully!','success');resetUpload();goPage('archive')
   },800)
 }
-function resetUpload(){['u-ti','u-de','u-lo','u-ta','u-ac','u-me','u-eq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('u-ty').value='';document.getElementById('u-re').value='';document.getElementById('u-fi').value='';const drop=document.getElementById('fzone');if(drop)drop.classList.remove('ok');const ui=document.getElementById('fzone-ui');if(ui)ui.innerHTML='<div class="fzone-arrow">↑</div><p class="fzone-main">Click to choose file</p><p class="fzone-sub">Images · 4K Video · 3D Scans · LiDAR · PDF</p>';document.getElementById('spec-card').classList.add('hidden')}
+function resetUpload(){['u-ti','u-de','u-lo','u-ta','u-ac','u-me','u-eq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('u-ty').value='';document.getElementById('u-re').value='';document.getElementById('u-fi').value='';const drop=document.getElementById('fzone');if(drop)drop.classList.remove('ok');const ui=document.getElementById('fzone-ui');if(ui)ui.innerHTML='<div class="fzone-icon">↑</div><p class="fzone-main">Drag & drop or click to upload</p><p class="fzone-sub">Images · 4K Video · 3D Scans (.obj/.glb) · LiDAR (.las/.laz) · PDF</p>';document.getElementById('spec-card').classList.add('hidden')}
 
 /* EDIT */
 function openEditPg(){if(!curAsset)return;const a=curAsset;document.getElementById('e-ti').value=a.title||'';document.getElementById('e-de').value=a.description||'';document.getElementById('e-lo').value=a.location||'';document.getElementById('e-re').value=a.region||'';document.getElementById('e-ty').value=a.type||'image';document.getElementById('e-ta').value=(a.tags||[]).join(', ');goPage('edit')}
@@ -213,9 +290,114 @@ function adminTab(t){adminView=t;document.getElementById('adv-u').classList.togg
 function renderAdmin(){
   if(!me||me.role!=='admin'){toast('Admin access required.','error');goPage('home');return}
   document.getElementById('ub').textContent=USERS.length;document.getElementById('ab').textContent=ASSETS.length
-  document.getElementById('t-users').innerHTML=USERS.map(u=>`<tr><td style="color:var(--white);font-weight:500">${u.first} ${u.last}</td><td>${u.email}</td><td><span class="role-badge ${u.role}">${u.role}</span></td><td>${u.org||'—'}</td><td>${u.joined||'—'}</td><td><div class="row-acts">${u.id!==me.id?`<button class="btn-red-sm" onclick="delUser('${u.id}','${u.first} ${u.last}')">Remove</button>`:`<span style="font-size:.72rem;color:var(--text3)">You</span>`}</div></td></tr>`).join('')
-  document.getElementById('t-assets').innerHTML=ASSETS.map(a=>`<tr><td style="color:var(--white);font-weight:500;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</td><td>${TL[a.type]||a.type}</td><td>${a.location||'—'}</td><td>${a.uploadedByName||'—'}</td><td>${a.uploadedAt||'—'}</td><td><div class="row-acts"><button class="btn-ghost btn-sm" onclick="openDetail('${a.id}')">View</button><button class="btn-red-sm" onclick="delFromCard('${a.id}','${(a.title||'').replace(/'/g,"\\'")}')">Delete</button></div></td></tr>`).join('')
+  document.getElementById('t-users').innerHTML=USERS.map(u=>`<tr><td style="color:var(--w);font-weight:600">${u.first} ${u.last}</td><td>${u.email}</td><td><span class="role-badge ${u.role}">${u.role}</span></td><td>${u.org||'—'}</td><td>${u.joined||'—'}</td><td><div class="row-acts">${u.id!==me.id?`<button class="btn-danger-sm" onclick="delUser('${u.id}','${u.first} ${u.last}')">Remove</button>`:`<span style="font-size:.72rem;color:var(--t3)">You</span>`}</div></td></tr>`).join('')
+  document.getElementById('t-assets').innerHTML=ASSETS.map(a=>`<tr><td style="color:var(--w);font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</td><td>${TL[a.type]||a.type}</td><td>${a.location||'—'}</td><td>${a.uploadedByName||'—'}</td><td>${a.uploadedAt||'—'}</td><td><div class="row-acts"><button class="btn-sm-outline btn-sm" onclick="openDetail('${a.id}')">View</button><button class="btn-danger-sm" onclick="delFromCard('${a.id}','${(a.title||'').replace(/'/g,"\\'")}')">Delete</button></div></td></tr>`).join('')
 }
+
+/* VIEW TOGGLE */
+function setView(v){
+  curView=v
+  document.getElementById('vb-grid').classList.toggle('active',v==='grid')
+  document.getElementById('vb-list').classList.toggle('active',v==='list')
+  const grid=document.getElementById('archive-grid')
+  if(grid){grid.className='grid'+(v==='list'?' list-view':'')}
+}
+
+/* RELATED ASSETS */
+function renderRelated(a){
+  const rel=ASSETS.filter(x=>x.id!==a.id&&(x.type===a.type||x.region===a.region)).slice(0,3)
+  const wrap=document.getElementById('det-related'),grid=document.getElementById('related-grid')
+  if(!wrap||!grid)return
+  if(!rel.length){wrap.classList.add('hidden');return}
+  wrap.classList.remove('hidden')
+  grid.innerHTML=rel.map((r,i)=>cardHTML(r,i)).join('')
+}
+
+/* SHARE & DOWNLOAD */
+function shareAsset(){
+  if(!curAsset)return
+  const txt=`HeritageGuard — ${curAsset.title} · ${curAsset.location}`
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(()=>toast('Link copied to clipboard','success'))}
+  else{toast('Asset: '+curAsset.title,'success')}
+}
+function downloadAsset(){
+  if(!curAsset)return
+  if(curAsset.thumbnail){
+    const a=document.createElement('a');a.href=curAsset.thumbnail;a.download=(curAsset.title||'asset').replace(/\s+/g,'_')+'.jpg';a.target='_blank';a.click()
+  }else{toast('No downloadable file attached to this record.','warn')}
+}
+
+/* SKELETON LOADING */
+function renderSkeletons(gridId,count){
+  const grid=document.getElementById(gridId);if(!grid)return
+  grid.innerHTML=Array.from({length:count},()=>`<div class="skel-card"><div class="skel skel-thumb"></div><div class="skel-body"><div class="skel skel-line long"></div><div class="skel skel-line med"></div><div class="skel skel-line short"></div></div></div>`).join('')
+}
+
+/* ANIMATED COUNTERS */
+function initCounters(){
+  const els=document.querySelectorAll('.hs-n')
+  if(!els.length||countersAnimated)return
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting&&!countersAnimated){
+        countersAnimated=true
+        els.forEach(el=>{
+          const raw=el.textContent.trim()
+          const cleaned=raw.replace(/,/g,'')
+          const num=parseFloat(cleaned.replace(/[^0-9.]/g,''))
+          if(isNaN(num))return
+          const suffix=cleaned.replace(/[0-9.]/g,'')
+          const isFloat=!Number.isInteger(num)
+          const dur=1400;let startTime=null
+          const fmt=v=>isFloat?v.toFixed(1):Math.round(v).toLocaleString()
+          const step=ts=>{
+            if(!startTime)startTime=ts
+            const p=Math.min((ts-startTime)/dur,1)
+            const ease=1-Math.pow(1-p,3)
+            el.textContent=fmt(ease*num)+suffix
+            if(p<1)requestAnimationFrame(step)
+            else{el.textContent=raw}
+          }
+          requestAnimationFrame(step)
+        })
+        obs.disconnect()
+      }
+    })
+  },{threshold:.4})
+  const strip=document.querySelector('.hero-stats')
+  if(strip)obs.observe(strip)
+}
+
+/* DRAG & DROP UPLOAD */
+function initDragDrop(){
+  const zone=document.getElementById('fzone');if(!zone)return
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='var(--au2)';zone.style.background='var(--aug)'})
+  zone.addEventListener('dragleave',()=>{zone.style.borderColor='';zone.style.background=''})
+  zone.addEventListener('drop',e=>{
+    e.preventDefault();zone.style.borderColor='';zone.style.background=''
+    const fi=document.getElementById('u-fi')
+    if(e.dataTransfer.files.length){
+      const dt=new DataTransfer()
+      dt.items.add(e.dataTransfer.files[0])
+      fi.files=dt.files
+      onFilePick(fi)
+    }
+  })
+}
+
+/* SCROLL PROGRESS */
+window.addEventListener('scroll',()=>{
+  const prog=document.getElementById('scroll-prog');if(!prog)return;
+  const scrolled=(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight))*100;
+  prog.style.width=Math.min(scrolled,100)+'%';
+},{passive:true})
+
+/* BROWSER BACK / FORWARD */
+window.addEventListener('popstate',e=>{
+  if(!e.state){goPage('home',false);return}
+  if(e.state.page==='detail'&&e.state.id){openDetail(e.state.id,false)}
+  else{goPage(e.state.page||'home',false)}
+})
 
 /* INIT */
 document.addEventListener('DOMContentLoaded',()=>{
