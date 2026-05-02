@@ -264,8 +264,16 @@ function renderProfile(){
   document.getElementById('p-em').value=me.email||''
   document.getElementById('p-org').value=me.org||''
   ;['p-cp','p-np','p-np2'].forEach(id=>{document.getElementById(id).value=''})
+  const badge=document.getElementById('pnav-badge');if(badge)badge.textContent=mine.length
   const grid=document.getElementById('my-grid'),none=document.getElementById('no-mine')
   if(!mine.length){grid.innerHTML='';none.classList.remove('hidden')}else{none.classList.add('hidden');grid.innerHTML=mine.map((a,i)=>cardHTML(a,i)).join('')}
+  profileTab('account')
+}
+function profileTab(t){
+  document.getElementById('ptab-account').classList.toggle('hidden',t!=='account')
+  document.getElementById('ptab-uploads').classList.toggle('hidden',t!=='uploads')
+  document.getElementById('pnav-account').classList.toggle('active',t==='account')
+  document.getElementById('pnav-uploads').classList.toggle('active',t==='uploads')
 }
 function saveProfile(){
   if(!me)return
@@ -290,8 +298,8 @@ function adminTab(t){adminView=t;document.getElementById('adv-u').classList.togg
 function renderAdmin(){
   if(!me||me.role!=='admin'){toast('Admin access required.','error');goPage('home');return}
   document.getElementById('ub').textContent=USERS.length;document.getElementById('ab').textContent=ASSETS.length
-  document.getElementById('t-users').innerHTML=USERS.map(u=>`<tr><td style="color:var(--w);font-weight:600">${u.first} ${u.last}</td><td>${u.email}</td><td><span class="role-badge ${u.role}">${u.role}</span></td><td>${u.org||'—'}</td><td>${u.joined||'—'}</td><td><div class="row-acts">${u.id!==me.id?`<button class="btn-danger-sm" onclick="delUser('${u.id}','${u.first} ${u.last}')">Remove</button>`:`<span style="font-size:.72rem;color:var(--t3)">You</span>`}</div></td></tr>`).join('')
-  document.getElementById('t-assets').innerHTML=ASSETS.map(a=>`<tr><td style="color:var(--w);font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</td><td>${TL[a.type]||a.type}</td><td>${a.location||'—'}</td><td>${a.uploadedByName||'—'}</td><td>${a.uploadedAt||'—'}</td><td><div class="row-acts"><button class="btn-sm-outline btn-sm" onclick="openDetail('${a.id}')">View</button><button class="btn-danger-sm" onclick="delFromCard('${a.id}','${(a.title||'').replace(/'/g,"\\'")}')">Delete</button></div></td></tr>`).join('')
+  document.getElementById('t-users').innerHTML=USERS.map(u=>`<tr><td style="color:var(--t1);font-weight:600">${u.first} ${u.last}</td><td>${u.email}</td><td><span class="role-badge ${u.role}">${u.role}</span></td><td>${u.org||'—'}</td><td>${u.joined||'—'}</td><td><div class="row-acts">${u.id!==me.id?`<button class="btn-danger-sm" onclick="delUser('${u.id}','${u.first} ${u.last}')">Remove</button>`:`<span style="font-size:.72rem;color:var(--t3)">You</span>`}</div></td></tr>`).join('')
+  document.getElementById('t-assets').innerHTML=ASSETS.map(a=>`<tr><td style="color:var(--t1);font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</td><td>${TL[a.type]||a.type}</td><td>${a.location||'—'}</td><td>${a.uploadedByName||'—'}</td><td>${a.uploadedAt||'—'}</td><td><div class="row-acts"><button class="btn-sm-outline btn-sm" onclick="openDetail('${a.id}')">View</button><button class="btn-danger-sm" onclick="delFromCard('${a.id}','${(a.title||'').replace(/'/g,"\\'")}')">Delete</button></div></td></tr>`).join('')
 }
 
 /* VIEW TOGGLE */
