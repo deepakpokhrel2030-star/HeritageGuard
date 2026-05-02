@@ -18,6 +18,11 @@ async function boot(){
   goPage('home',false)
   renderSkeletons('featured-grid',4)
   try{ASSETS=USE_LIVE?await getAllAssets():await fetch('assets.json').then(r=>r.json())}catch(e){ASSETS=[];console.warn(e)}
+  /* restore saved session */
+  try{
+    const saved=localStorage.getItem('hg_session')
+    if(saved){const {id}=JSON.parse(saved);const u=USERS.find(u=>u.id===id);if(u)signIn(u,true)}
+  }catch(e){localStorage.removeItem('hg_session')}
   renderFeatured()
   const el=document.getElementById('home-total');if(el)el.textContent=ASSETS.length
   const el2=document.getElementById('ic-total');if(el2)el2.textContent=ASSETS.length
@@ -189,7 +194,7 @@ function doRegister(){
   if(USERS.find(u=>u.email===em)){toast('An account with this email already exists.','error');return}
   showLoad();setTimeout(()=>{hideLoad();USERS.push({id:'u'+Date.now(),first:fn,last:ln,email:em,pw,role:'contributor',org:org||'Public',joined:new Date().toISOString().split('T')[0]});toast('Account created! You can now sign in.','success');authTab('in');document.getElementById('in-em').value=em;document.getElementById('in-pw').value=''},600)
 }
-function signIn(u){
+function signIn(u, silent=false){
   me=u
   document.getElementById('nav-guest').classList.add('hidden')
   document.getElementById('nav-user').classList.remove('hidden')
@@ -197,9 +202,18 @@ function signIn(u){
   document.getElementById('chip-av').textContent=u.first[0].toUpperCase()
   document.getElementById('nl-upload').classList.remove('hidden')
   document.getElementById('nl-admin').classList.toggle('hidden',u.role!=='admin')
-  toast('Welcome back, '+u.first+'!','success');goPage('home')
+  localStorage.setItem('hg_session',JSON.stringify({id:u.id}))
+  if(!silent){toast('Welcome back, '+u.first+'!','success');goPage('home')}
 }
-function doLogout(){me=null;document.getElementById('nav-guest').classList.remove('hidden');document.getElementById('nav-user').classList.add('hidden');document.getElementById('nl-upload').classList.add('hidden');document.getElementById('nl-admin').classList.add('hidden');toast('Signed out.','success');goPage('home')}
+function doLogout(){
+  me=null
+  localStorage.removeItem('hg_session')
+  document.getElementById('nav-guest').classList.remove('hidden')
+  document.getElementById('nav-user').classList.add('hidden')
+  document.getElementById('nl-upload').classList.add('hidden')
+  document.getElementById('nl-admin').classList.add('hidden')
+  toast('Signed out.','success');goPage('home')
+}
 
 /* UPLOAD */
 function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
