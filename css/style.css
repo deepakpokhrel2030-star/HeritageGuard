@@ -2226,6 +2226,7 @@ main {
   border-bottom: 1px solid var(--b0);
   vertical-align: middle;
 }
+.dtbl td:first-child { color: var(--t1); font-weight: 600 }
 .dtbl tr:last-child td { border-bottom: none }
 .dtbl tr:hover td { background: var(--bg2) }
 .role-badge {
