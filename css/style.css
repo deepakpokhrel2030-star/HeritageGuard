@@ -256,7 +256,20 @@ r { color: var(--au2); font-style: normal }
   color: #05080e;
   flex-shrink: 0;
 }
-.chip-name { font-size: .78rem; font-weight: 600; color: var(--t1) }
+.chip-name {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--t1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+#nav-user {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+}
 .btn-signout {
   background: none;
   border: 1px solid var(--b1);
