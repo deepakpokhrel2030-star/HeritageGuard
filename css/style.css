@@ -1971,6 +1971,78 @@ main {
 }
 .auth-demo-btn:hover { border-color: var(--aub); color: var(--au) }
 
+/* ── Password show/hide ── */
+.pw-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pw-wrap input {
+  padding-right: 2.6rem !important;
+  width: 100%;
+}
+.pw-eye {
+  position: absolute;
+  right: .65rem;
+  background: none;
+  border: none;
+  color: var(--t3);
+  cursor: pointer;
+  padding: .25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color .15s;
+  flex-shrink: 0;
+}
+.pw-eye:hover { color: var(--t1) }
+
+/* ── Password strength ── */
+.pw-strength {
+  height: 3px;
+  background: var(--b1);
+  border-radius: 3px;
+  margin-top: .5rem;
+  overflow: hidden;
+}
+.pw-strength-bar {
+  height: 100%;
+  width: 0%;
+  border-radius: 3px;
+  transition: width .3s, background .3s;
+}
+.pw-strength-label {
+  display: block;
+  font-size: .65rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  margin-top: .3rem;
+  min-height: 1em;
+  transition: color .3s;
+}
+
+/* ── Forgot password + field label row ── */
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .42rem;
+}
+.field-label-row label { margin-bottom: 0 }
+.forgot-btn {
+  background: none;
+  border: none;
+  color: var(--au);
+  font-family: var(--fb);
+  font-size: .68rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color .15s;
+}
+.forgot-btn:hover { color: var(--au2) }
+
 /* ══════════════════════════════════════════════════════
    FORMS
 ══════════════════════════════════════════════════════ */

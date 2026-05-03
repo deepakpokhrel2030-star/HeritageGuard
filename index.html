@@ -563,8 +563,22 @@
             <div id="f-in">
               <h2 class="auth-heading">Welcome back</h2>
               <p class="auth-sub">Sign in to contribute to the global archive</p>
-              <div class="field"><label>Email address</label><input type="email" id="in-em" placeholder="your@email.com"/></div>
-              <div class="field"><label>Password</label><input type="password" id="in-pw" placeholder="••••••••"/></div>
+              <div class="field">
+                <label>Email address</label>
+                <input type="email" id="in-em" placeholder="your@email.com" onkeydown="if(event.key==='Enter')document.getElementById('in-pw').focus()"/>
+              </div>
+              <div class="field">
+                <div class="field-label-row">
+                  <label>Password</label>
+                  <button type="button" class="forgot-btn" onclick="forgotPassword()">Forgot password?</button>
+                </div>
+                <div class="pw-wrap">
+                  <input type="password" id="in-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+                  <button type="button" class="pw-eye" onclick="togglePw('in-pw',this)" tabindex="-1" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
               <button class="btn-gold w100" onclick="doLogin()">Sign in →</button>
             </div>
 
@@ -577,7 +591,28 @@
                 <div class="field"><label>Last name <r>*</r></label><input type="text" id="rg-ln" placeholder="Last name"/></div>
               </div>
               <div class="field"><label>Email <r>*</r></label><input type="email" id="rg-em" placeholder="your@email.com"/></div>
-              <div class="field"><label>Password <r>*</r></label><input type="password" id="rg-pw" placeholder="Min. 8 characters"/></div>
+              <div class="field">
+                <label>Password <r>*</r></label>
+                <div class="pw-wrap">
+                  <input type="password" id="rg-pw" placeholder="Min. 8 characters" oninput="checkStrength(this.value)"/>
+                  <button type="button" class="pw-eye" onclick="togglePw('rg-pw',this)" tabindex="-1" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+                <div class="pw-strength">
+                  <div class="pw-strength-bar" id="pw-strength-bar"></div>
+                </div>
+                <span class="pw-strength-label" id="pw-strength-label"></span>
+              </div>
+              <div class="field">
+                <label>Confirm password <r>*</r></label>
+                <div class="pw-wrap">
+                  <input type="password" id="rg-pw2" placeholder="Repeat password" onkeydown="if(event.key==='Enter')doRegister()"/>
+                  <button type="button" class="pw-eye" onclick="togglePw('rg-pw2',this)" tabindex="-1" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
               <div class="field"><label>Organisation <span class="opt">optional</span></label><input type="text" id="rg-org" placeholder="e.g. UNESCO, British Museum"/></div>
               <button class="btn-gold w100" onclick="doRegister()">Create account →</button>
             </div>
@@ -745,9 +780,33 @@
             </div>
             <div class="fblock">
               <h3 class="fblock-label">Change Password</h3>
-              <div class="field"><label>Current password</label><input type="password" id="p-cp" placeholder="••••••••"/></div>
-              <div class="field"><label>New password</label><input type="password" id="p-np" placeholder="Min. 8 characters"/></div>
-              <div class="field"><label>Confirm new password</label><input type="password" id="p-np2" placeholder="Repeat new password"/></div>
+              <div class="field">
+                <label>Current password</label>
+                <div class="pw-wrap">
+                  <input type="password" id="p-cp" placeholder="••••••••"/>
+                  <button type="button" class="pw-eye" onclick="togglePw('p-cp',this)" tabindex="-1" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <label>New password</label>
+                <div class="pw-wrap">
+                  <input type="password" id="p-np" placeholder="Min. 8 characters"/>
+                  <button type="button" class="pw-eye" onclick="togglePw('p-np',this)" tabindex="-1" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
+              <div class="field">
+                <label>Confirm new password</label>
+                <div class="pw-wrap">
+                  <input type="password" id="p-np2" placeholder="Repeat new password" onkeydown="if(event.key==='Enter')changePass()"/>
+                  <button type="button" class="pw-eye" onclick="togglePw('p-np2',this)" tabindex="-1" aria-label="Show password">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
               <button class="btn-gold" onclick="changePass()">Update Password</button>
             </div>
           </div>

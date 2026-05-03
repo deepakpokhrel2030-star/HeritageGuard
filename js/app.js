@@ -180,7 +180,13 @@ function playVideo(){
 }
 
 /* AUTH */
-function authTab(t){document.getElementById('f-in').classList.toggle('hidden',t!=='in');document.getElementById('f-reg').classList.toggle('hidden',t!=='reg');document.getElementById('at-in').classList.toggle('active',t==='in');document.getElementById('at-reg').classList.toggle('active',t==='reg')}
+function authTab(t){
+  document.getElementById('f-in').classList.toggle('hidden',t!=='in')
+  document.getElementById('f-reg').classList.toggle('hidden',t!=='reg')
+  document.getElementById('at-in').classList.toggle('active',t==='in')
+  document.getElementById('at-reg').classList.toggle('active',t==='reg')
+  setTimeout(()=>{const f=document.getElementById(t==='in'?'in-em':'rg-fn');if(f)f.focus()},50)
+}
 function fillDemo(e,p){authTab('in');document.getElementById('in-em').value=e;document.getElementById('in-pw').value=p;toast('Demo credentials filled — click Sign in','success')}
 function doLogin(){
   const email=document.getElementById('in-em').value.trim(),pw=document.getElementById('in-pw').value
@@ -188,11 +194,32 @@ function doLogin(){
   showLoad();setTimeout(()=>{hideLoad();const u=USERS.find(u=>u.email===email&&u.pw===pw);if(!u){toast('Incorrect email or password.','error');return}signIn(u)},600)
 }
 function doRegister(){
-  const fn=document.getElementById('rg-fn').value.trim(),ln=document.getElementById('rg-ln').value.trim(),em=document.getElementById('rg-em').value.trim(),pw=document.getElementById('rg-pw').value,org=document.getElementById('rg-org').value.trim()
-  if(!fn||!ln||!em||!pw){toast('Please fill in all required fields.','error');return}
+  const fn=document.getElementById('rg-fn').value.trim(),ln=document.getElementById('rg-ln').value.trim(),em=document.getElementById('rg-em').value.trim(),pw=document.getElementById('rg-pw').value,pw2=document.getElementById('rg-pw2').value,org=document.getElementById('rg-org').value.trim()
+  if(!fn||!ln||!em||!pw||!pw2){toast('Please fill in all required fields.','error');return}
   if(pw.length<8){toast('Password must be at least 8 characters.','error');return}
+  if(pw!==pw2){toast('Passwords do not match.','error');return}
   if(USERS.find(u=>u.email===em)){toast('An account with this email already exists.','error');return}
   showLoad();setTimeout(()=>{hideLoad();USERS.push({id:'u'+Date.now(),first:fn,last:ln,email:em,pw,role:'contributor',org:org||'Public',joined:new Date().toISOString().split('T')[0]});toast('Account created! You can now sign in.','success');authTab('in');document.getElementById('in-em').value=em;document.getElementById('in-pw').value=''},600)
+}
+function forgotPassword(){toast('Password reset — contact your archive administrator.','warn')}
+function togglePw(id,btn){
+  const inp=document.getElementById(id);if(!inp)return
+  const show=inp.type==='password';inp.type=show?'text':'password'
+  btn.innerHTML=show
+    ?`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+    :`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`
+}
+function checkStrength(val){
+  const bar=document.getElementById('pw-strength-bar'),lbl=document.getElementById('pw-strength-label')
+  if(!bar||!lbl)return
+  if(!val){bar.style.width='0%';lbl.textContent='';return}
+  let s=0
+  if(val.length>=8)s++;if(val.length>=12)s++
+  if(/[A-Z]/.test(val))s++;if(/[0-9]/.test(val))s++;if(/[^A-Za-z0-9]/.test(val))s++
+  const lvls=[{w:'20%',c:'#ef4444',l:'Weak'},{w:'40%',c:'#f97316',l:'Fair'},{w:'60%',c:'#eab308',l:'Good'},{w:'85%',c:'#22c55e',l:'Strong'},{w:'100%',c:'#16a34a',l:'Very strong'}]
+  const lvl=lvls[Math.min(s,4)]
+  bar.style.width=lvl.w;bar.style.background=lvl.c
+  lbl.textContent=lvl.l;lbl.style.color=lvl.c
 }
 function signIn(u, silent=false){
   me=u
