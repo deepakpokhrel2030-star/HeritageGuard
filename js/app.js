@@ -9,7 +9,7 @@ let USERS = [
 const TL = { image:'Image', video:'4K Video', '3dscan':'3D Scan', lidar:'LiDAR Survey', document:'Document' }
 const TI = { image:'🖼️', video:'🎬', '3dscan':'📦', lidar:'🛰', document:'📄' }
 
-let ASSETS=[],me=null,curPage='home',prevPage='home',curAsset=null,typeFilter='',stimer=null,modalCb=null,USE_LIVE=false,curView='grid',countersAnimated=false,archivePage=1
+let ASSETS=[],me=null,curPage='home',prevPage='home',curAsset=null,typeFilter='',stimer=null,modalCb=null,USE_LIVE=true,curView='grid',countersAnimated=false,archivePage=1
 const PAGE_SIZE=8
 
 /* BOOT */
