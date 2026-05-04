@@ -187,19 +187,87 @@ function authTab(t){
   setTimeout(()=>{const f=document.getElementById(t==='in'?'in-em':'rg-fn');if(f)f.focus()},50)
 }
 function fillDemo(e,p){authTab('in');document.getElementById('in-em').value=e;document.getElementById('in-pw').value=p;toast('Demo credentials filled — click Sign in','success')}
-function doLogin(){
-  const email=document.getElementById('in-em').value.trim(),pw=document.getElementById('in-pw').value
+
+async function doLogin(){
+  const email=document.getElementById('in-em').value.trim()
+  const pw=document.getElementById('in-pw').value
   if(!email||!pw){toast('Please enter your email and password.','error');return}
-  showLoad();setTimeout(()=>{hideLoad();const u=USERS.find(u=>u.email===email&&u.pw===pw);if(!u){toast('Incorrect email or password.','error');return}signIn(u)},600)
+  showLoad()
+  try{
+    const r=await fetch(CONFIG.ENDPOINTS.loginUser,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pw})
+    })
+    const data=await r.json()
+    const users=Array.isArray(data)?data:(data.Documents||data.value||[])
+    if(!users.length){hideLoad();toast('Incorrect email or password.','error');return}
+    const u=users[0]
+    const user={
+      id:u.id,
+      first:u.firstName,
+      last:u.lastName,
+      email:u.email,
+      pw:u.password,
+      role:u.role||'contributor',
+      org:u.org||'',
+      joined:u.joined||''
+    }
+    if(!USERS.find(x=>x.id===user.id))USERS.push(user)
+    hideLoad()
+    signIn(user)
+  }catch(e){
+    hideLoad()
+    console.error('Login error:',e)
+    const u=USERS.find(u=>u.email===email&&u.pw===pw)
+    if(!u){toast('Incorrect email or password.','error');return}
+    signIn(u)
+  }
 }
-function doRegister(){
-  const fn=document.getElementById('rg-fn').value.trim(),ln=document.getElementById('rg-ln').value.trim(),em=document.getElementById('rg-em').value.trim(),pw=document.getElementById('rg-pw').value,pw2=document.getElementById('rg-pw2').value,org=document.getElementById('rg-org').value.trim()
+
+async function doRegister(){
+  const fn=document.getElementById('rg-fn').value.trim()
+  const ln=document.getElementById('rg-ln').value.trim()
+  const em=document.getElementById('rg-em').value.trim()
+  const pw=document.getElementById('rg-pw').value
+  const pw2=document.getElementById('rg-pw2').value
+  const org=document.getElementById('rg-org').value.trim()
   if(!fn||!ln||!em||!pw||!pw2){toast('Please fill in all required fields.','error');return}
   if(pw.length<8){toast('Password must be at least 8 characters.','error');return}
   if(pw!==pw2){toast('Passwords do not match.','error');return}
-  if(USERS.find(u=>u.email===em)){toast('An account with this email already exists.','error');return}
-  showLoad();setTimeout(()=>{hideLoad();USERS.push({id:'u'+Date.now(),first:fn,last:ln,email:em,pw,role:'contributor',org:org||'Public',joined:new Date().toISOString().split('T')[0]});toast('Account created! You can now sign in.','success');authTab('in');document.getElementById('in-em').value=em;document.getElementById('in-pw').value=''},600)
+  showLoad()
+  try{
+    const newUser={
+      id:'u'+Date.now(),
+      firstName:fn,
+      lastName:ln,
+      email:em,
+      password:pw,
+      role:'contributor',
+      org:org||'Public',
+      joined:new Date().toISOString().split('T')[0]
+    }
+    await fetch(CONFIG.ENDPOINTS.registerUser,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(newUser)
+    })
+    USERS.push({id:newUser.id,first:fn,last:ln,email:em,pw,role:'contributor',org:org||'Public',joined:newUser.joined})
+    hideLoad()
+    toast('Account created! You can now sign in.','success')
+    authTab('in')
+    document.getElementById('in-em').value=em
+    document.getElementById('in-pw').value=''
+  }catch(e){
+    hideLoad()
+    console.error('Register error:',e)
+    USERS.push({id:'u'+Date.now(),first:fn,last:ln,email:em,pw,role:'contributor',org:org||'Public',joined:new Date().toISOString().split('T')[0]})
+    toast('Account created! You can now sign in.','success')
+    authTab('in')
+    document.getElementById('in-em').value=em
+  }
 }
+
 function forgotPassword(){toast('Password reset — contact your archive administrator.','warn')}
 function togglePw(id,btn){
   const inp=document.getElementById(id);if(!inp)return
