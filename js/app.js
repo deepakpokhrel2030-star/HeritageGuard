@@ -418,28 +418,55 @@
     showLoad()
     toast('Uploading to Azure Blob Storage...','success')
 
-    /* STEP 1 — Upload file to Azure Blob Storage */
-    let blobUrl=''
-    try{
-      const f=file.files[0]
-      const blobName=Date.now()+'-'+f.name.replace(/\s+/g,'-')
-      const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
-      const uploadRes=await fetch(uploadUrl,{
-        method:'PUT',
-        headers:{'x-ms-blob-type':'BlockBlob','Content-Type':f.type||'application/octet-stream'},
-        body:f
-      })
-      if(uploadRes.ok){
-        blobUrl=CONFIG.BLOB.baseUrl+'/'+blobName
-        toast('File uploaded to Azure Blob Storage ✓','success')
-      }else{
-        console.warn('Blob upload failed:',uploadRes.status)
-        toast('Blob upload failed — saving without file','warn')
+    /* STEP 1 — Upload file to Azure Blob Storage with progress */
+let blobUrl=''
+try{
+  const f=file.files[0]
+  const blobName=Date.now()+'-'+f.name.replace(/\s+/g,'-')
+  const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
+  
+  // Show file size warning for large files
+  const sizeMB=(f.size/1024/1024).toFixed(1)
+  if(f.size>50*1024*1024){
+    toast(`Uploading ${sizeMB}MB — large file, please wait...`,'success')
+  } else {
+    toast('Uploading to Azure Blob Storage...','success')
+  }
+
+  // Use XMLHttpRequest for upload progress tracking
+  blobUrl = await new Promise((resolve, reject)=>{
+    const xhr = new XMLHttpRequest()
+    xhr.open('PUT', uploadUrl)
+    xhr.setRequestHeader('x-ms-blob-type', 'BlockBlob')
+    xhr.setRequestHeader('Content-Type', f.type||'application/octet-stream')
+    
+    // Progress tracking
+    xhr.upload.addEventListener('progress', e=>{
+      if(e.lengthComputable){
+        const pct=Math.round((e.loaded/e.total)*100)
+        toast(`Uploading: ${pct}% (${(e.loaded/1024/1024).toFixed(1)}MB / ${sizeMB}MB)`,'success')
       }
-    }catch(e){
-      console.error('Blob upload error:',e)
-      toast('Blob upload failed — saving without file','warn')
-    }
+    })
+    
+    xhr.addEventListener('load',()=>{
+      if(xhr.status===201||xhr.status===200){
+        resolve(CONFIG.BLOB.baseUrl+'/'+blobName)
+      } else {
+        reject(new Error('Upload failed: '+xhr.status))
+      }
+    })
+    
+    xhr.addEventListener('error',()=>reject(new Error('Network error during upload')))
+    xhr.addEventListener('abort',()=>reject(new Error('Upload cancelled')))
+    
+    xhr.send(f)
+  })
+  
+  toast('File uploaded to Azure Blob Storage ✓','success')
+}catch(e){
+  console.error('Blob upload error:',e)
+  toast('Blob upload failed — saving without file','warn')
+}
 
     /* STEP 2 — Generate video thumbnail if video type */
     let thumbnailUrl=blobUrl
