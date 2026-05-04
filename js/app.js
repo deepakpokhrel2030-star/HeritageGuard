@@ -1,4 +1,4 @@
-/* HeritageGuard app.js — final with Azure Logic App + Blob Storage integration */
+/* HeritageGuard app.js — complete with Azure Logic App + Blob Storage + Video Thumbnails */
 
 let USERS = [
   { id:'u1', first:'Deepak',  last:'Pokhrel',  email:'admin@heritaguard.org',       pw:'admin1234', role:'admin',       org:'HeritageGuard',  joined:'2026-01-10' },
@@ -12,7 +12,9 @@ const TI = { image:'🖼️', video:'🎬', '3dscan':'📦', lidar:'🛰', docum
 let ASSETS=[],me=null,curPage='home',prevPage='home',curAsset=null,typeFilter='',stimer=null,modalCb=null,USE_LIVE=true,curView='grid',countersAnimated=false,archivePage=1
 const PAGE_SIZE=8
 
-/* BOOT */
+/* ============================================================
+   BOOT
+   ============================================================ */
 async function boot(){
   history.replaceState({page:'home'},'','#home')
   goPage('home',false)
@@ -28,7 +30,9 @@ async function boot(){
   initCounters()
 }
 
-/* NAVIGATION */
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
 function goPage(n,push=true){
   document.querySelectorAll('.pg').forEach(p=>p.classList.add('hidden'))
   const pg=document.getElementById('pg-'+n);if(pg)pg.classList.remove('hidden')
@@ -47,13 +51,17 @@ function openRegister(){goPage('login');authTab('reg')}
 function needAuth(){if(!me){toast('Please sign in to upload assets.','warn');goPage('login');return}if(me.role==='viewer'){toast('Your account does not have upload permission.','warn');return}goPage('upload')}
 function goArchiveType(t){typeFilter=t;goPage('archive');setTimeout(()=>{document.querySelectorAll('.tp').forEach(b=>b.classList.remove('active'));const tb=document.querySelector(`.tp[data-t="${t}"]`);if(tb)tb.classList.add('active');applyFilters()},50)}
 
-/* UI HELPERS */
+/* ============================================================
+   UI HELPERS
+   ============================================================ */
 let _tt=null
 function toast(msg,type='success'){const el=document.getElementById('toast');el.textContent=msg;el.className=type;el.classList.remove('hidden');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.add('hidden'),3000)}
 function showLoad(){document.getElementById('loader').classList.remove('hidden')}
 function hideLoad(){document.getElementById('loader').classList.add('hidden')}
 
-/* MODAL */
+/* ============================================================
+   MODAL
+   ============================================================ */
 function openModal(title,msg,label,cb){
   document.getElementById('modal-title').textContent=title
   document.getElementById('modal-msg').textContent=msg
@@ -63,14 +71,18 @@ function openModal(title,msg,label,cb){
 }
 function closeModal(){document.getElementById('modal').classList.add('hidden');modalCb=null}
 
-/* HOME */
+/* ============================================================
+   HOME
+   ============================================================ */
 function renderFeatured(){
   const list=ASSETS.filter(a=>a.featured)
   const el=document.getElementById('featured-grid');if(el)el.innerHTML=list.map((a,i)=>cardHTML(a,i)).join('')
   const c=document.getElementById('home-total');if(c)c.textContent=ASSETS.length
 }
 
-/* ARCHIVE */
+/* ============================================================
+   ARCHIVE
+   ============================================================ */
 function renderArchive(){applyFilters()}
 function applyFilters(){
   const q=(document.getElementById('sq')?.value||'').trim().toLowerCase()
@@ -123,7 +135,9 @@ function debSearch(){archivePage=1;clearTimeout(stimer);stimer=setTimeout(applyF
 function setType(btn,t){archivePage=1;document.querySelectorAll('.tp').forEach(b=>b.classList.remove('active'));btn.classList.add('active');typeFilter=t;applyFilters()}
 function clearSearch(){archivePage=1;['sq','sl','st'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});typeFilter='';document.querySelectorAll('.tp').forEach(b=>b.classList.remove('active'));const all=document.querySelector('.tp[data-t=""]');if(all)all.classList.add('active');applyFilters()}
 
-/* CARD HTML */
+/* ============================================================
+   CARD HTML
+   ============================================================ */
 function cardHTML(a,i){
   const esc=s=>(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;')
   const icon=TI[a.type]||'📁',label=TL[a.type]||a.type
@@ -134,7 +148,9 @@ function cardHTML(a,i){
   return`<div class="card" style="animation-delay:${i*.04}s" onclick="openDetail('${a.id}')"><div class="card-thumb">${thumb}${fb}<div class="card-type-badge">${label}</div></div><div class="card-body"><div class="card-meta"><span></span><span class="card-date">${a.uploadedAt||''}</span></div><div class="card-title">${a.title||''}</div><div class="card-loc">${a.location||''}</div><div class="card-acts"><button class="btn-sm-outline btn-sm" onclick="event.stopPropagation();openDetail('${a.id}')">View</button>${acts}</div></div></div>`
 }
 
-/* DETAIL */
+/* ============================================================
+   DETAIL
+   ============================================================ */
 function openDetail(id,push=true){
   const a=ASSETS.find(x=>x.id===id);if(!a)return;curAsset=a
   const back=document.getElementById('det-back');back.onclick=()=>goPage(prevPage==='detail'?'archive':prevPage)
@@ -167,24 +183,28 @@ function renderDetBody(a){
   const aiHTML=(a.aiTags||[]).length?`<div class="det-block"><div class="det-block-label">Auto-generated tags</div><div class="tags">${(a.aiTags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`:''
   document.getElementById('det-body').innerHTML=`${media}<div class="det-eyebrow">${label} · ${a.uploadedAt||'—'} · by ${a.uploadedByName||'—'}</div><h1 class="det-title">${a.title||''}</h1><div class="det-metas"><div class="dm"><span class="dm-l">Location</span><span class="dm-v">${a.location||'—'}</span></div><div class="dm"><span class="dm-l">Region</span><span class="dm-v">${a.region||'—'}</span></div><div class="dm"><span class="dm-l">Type</span><span class="dm-v">${label}</span></div><div class="dm"><span class="dm-l">Uploaded by</span><span class="dm-v">${a.uploadedByName||'—'}</span></div></div><p class="det-desc">${a.description||'No description provided.'}</p><div class="tags">${tagsHTML}</div>${specsHTML}${aiHTML}`
 }
+
+/* ============================================================
+   VIDEO PLAYBACK — plays from Azure Blob Storage or YouTube
+   ============================================================ */
 function playVideo(){
   if(!curAsset)return
   const wrap=document.getElementById('det-video-wrap')
   if(!wrap)return
-  
-  // Use videoUrl if set, otherwise try thumbnail (blob storage URL)
   const src=curAsset.videoUrl||curAsset.thumbnail||''
-  
-  if(src&&src.startsWith('https://www.youtube.com')){
-    wrap.innerHTML=`<iframe class="det-video-frame" src="${src}?autoplay=1&rel=0&modestbranding=1" frameborder="0" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>`
-  } else if(src&&!src.startsWith('blob:')){
-    wrap.innerHTML=`<video class="det-video-frame" src="${src}" controls autoplay style="width:100%;height:100%;background:#000">Your browser does not support video playback.</video>`
+  if(src&&src.includes('youtube.com')){
+    const embedSrc=src.includes('/embed/')?src:src.replace('watch?v=','embed/')
+    wrap.innerHTML=`<iframe class="det-video-frame" src="${embedSrc}?autoplay=1&rel=0&modestbranding=1" frameborder="0" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>`
+  } else if(src&&src.startsWith('https://')&&!src.startsWith('blob:')){
+    wrap.innerHTML=`<video class="det-video-frame" src="${src}" controls autoplay style="width:100%;height:100%;background:#000;border-radius:8px">Your browser does not support video playback.</video>`
   } else {
     wrap.innerHTML=`<div class="det-video-unavail"><div class="dvu-icon">🎬</div><p class="dvu-title">Streamed via Azure Media Services</p><p class="dvu-sub">This ${curAsset.specs?.Duration||''} documentary is stored in Azure Blob Storage and streamed on demand.</p><button class="btn-outline" onclick="toast('Stream access request sent.','success')">Request Access</button></div>`
   }
 }
 
-/* AUTH */
+/* ============================================================
+   AUTH
+   ============================================================ */
 function authTab(t){
   document.getElementById('f-in').classList.toggle('hidden',t!=='in')
   document.getElementById('f-reg').classList.toggle('hidden',t!=='reg')
@@ -209,16 +229,7 @@ async function doLogin(){
     const users=Array.isArray(data)?data:(data.Documents||data.value||[])
     if(!users.length){hideLoad();toast('Incorrect email or password.','error');return}
     const u=users[0]
-    const user={
-      id:u.id,
-      first:u.firstName,
-      last:u.lastName,
-      email:u.email,
-      pw:u.password,
-      role:u.role||'contributor',
-      org:u.org||'',
-      joined:u.joined||''
-    }
+    const user={id:u.id,first:u.firstName,last:u.lastName,email:u.email,pw:u.password,role:u.role||'contributor',org:u.org||'',joined:u.joined||''}
     if(!USERS.find(x=>x.id===user.id))USERS.push(user)
     hideLoad()
     signIn(user)
@@ -243,21 +254,8 @@ async function doRegister(){
   if(pw!==pw2){toast('Passwords do not match.','error');return}
   showLoad()
   try{
-    const newUser={
-      id:'u'+Date.now(),
-      firstName:fn,
-      lastName:ln,
-      email:em,
-      password:pw,
-      role:'contributor',
-      org:org||'Public',
-      joined:new Date().toISOString().split('T')[0]
-    }
-    await fetch(CONFIG.ENDPOINTS.registerUser,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(newUser)
-    })
+    const newUser={id:'u'+Date.now(),firstName:fn,lastName:ln,email:em,password:pw,role:'contributor',org:org||'Public',joined:new Date().toISOString().split('T')[0]}
+    await fetch(CONFIG.ENDPOINTS.registerUser,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUser)})
     USERS.push({id:newUser.id,first:fn,last:ln,email:em,pw,role:'contributor',org:org||'Public',joined:newUser.joined})
     hideLoad()
     toast('Account created! You can now sign in.','success')
@@ -316,8 +314,52 @@ function doLogout(){
 }
 
 /* ============================================================
-   UPLOAD — Step 1: upload file to Azure Blob Storage
-             Step 2: save metadata to Cosmos DB via Logic App
+   VIDEO THUMBNAIL GENERATOR
+   Captures frame at 1 second and uploads to Azure Blob Storage
+   ============================================================ */
+function generateVideoThumbnail(file){
+  return new Promise((resolve,reject)=>{
+    const video=document.createElement('video')
+    const canvas=document.createElement('canvas')
+    const url=URL.createObjectURL(file)
+    video.src=url
+    video.muted=true
+    video.playsInline=true
+    video.crossOrigin='anonymous'
+    video.addEventListener('loadedmetadata',()=>{
+      video.currentTime=Math.min(1,video.duration*0.1)
+    })
+    video.addEventListener('seeked',()=>{
+      canvas.width=video.videoWidth||1280
+      canvas.height=video.videoHeight||720
+      const ctx=canvas.getContext('2d')
+      ctx.drawImage(video,0,0,canvas.width,canvas.height)
+      URL.revokeObjectURL(url)
+      canvas.toBlob(async(blob)=>{
+        if(!blob){reject(new Error('Canvas empty'));return}
+        const thumbName='thumb-'+Date.now()+'.jpg'
+        const uploadUrl=CONFIG.BLOB.baseUrl+'/'+thumbName+CONFIG.BLOB.sasToken
+        try{
+          const r=await fetch(uploadUrl,{
+            method:'PUT',
+            headers:{'x-ms-blob-type':'BlockBlob','Content-Type':'image/jpeg'},
+            body:blob
+          })
+          if(r.ok){resolve(CONFIG.BLOB.baseUrl+'/'+thumbName)}
+          else{reject(new Error('Thumb upload failed: '+r.status))}
+        }catch(e){reject(e)}
+      },'image/jpeg',0.85)
+    })
+    video.addEventListener('error',e=>{
+      URL.revokeObjectURL(url)
+      reject(new Error('Video load failed'))
+    })
+    video.load()
+  })
+}
+
+/* ============================================================
+   UPLOAD — Blob Storage first, then Cosmos DB
    ============================================================ */
 function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
 function onFilePick(input){
@@ -334,6 +376,7 @@ function onFilePick(input){
     }
   }
 }
+
 async function doUpload(){
   if(!me){toast('Please sign in first.','error');return}
   const title=document.getElementById('u-ti').value.trim()
@@ -348,7 +391,7 @@ async function doUpload(){
   showLoad()
   toast('Uploading to Azure Blob Storage...','success')
 
-  /* STEP 1 — Upload binary file to Azure Blob Storage */
+  /* STEP 1 — Upload file to Azure Blob Storage */
   let blobUrl=''
   try{
     const f=file.files[0]
@@ -356,25 +399,37 @@ async function doUpload(){
     const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
     const uploadRes=await fetch(uploadUrl,{
       method:'PUT',
-      headers:{
-        'x-ms-blob-type':'BlockBlob',
-        'Content-Type':f.type||'application/octet-stream'
-      },
+      headers:{'x-ms-blob-type':'BlockBlob','Content-Type':f.type||'application/octet-stream'},
       body:f
     })
     if(uploadRes.ok){
       blobUrl=CONFIG.BLOB.baseUrl+'/'+blobName
       toast('File uploaded to Azure Blob Storage ✓','success')
     }else{
-      console.warn('Blob upload failed:',uploadRes.status,uploadRes.statusText)
-      toast('Blob upload failed ('+uploadRes.status+') — saving without thumbnail','warn')
+      console.warn('Blob upload failed:',uploadRes.status)
+      toast('Blob upload failed — saving without file','warn')
     }
   }catch(e){
     console.error('Blob upload error:',e)
-    toast('Blob upload failed — saving without thumbnail','warn')
+    toast('Blob upload failed — saving without file','warn')
   }
 
-  /* STEP 2 — Build asset with Azure Blob URL as thumbnail (persists after refresh!) */
+  /* STEP 2 — Generate video thumbnail if video type */
+  let thumbnailUrl=blobUrl
+  let videoUrl=''
+  if(type==='video'&&file.files[0]&&blobUrl){
+    videoUrl=blobUrl  // the actual video file
+    toast('Generating video thumbnail...','success')
+    try{
+      thumbnailUrl=await generateVideoThumbnail(file.files[0])
+      toast('Thumbnail generated ✓','success')
+    }catch(e){
+      console.warn('Thumbnail generation failed:',e)
+      thumbnailUrl='' // no thumbnail, show icon
+    }
+  }
+
+  /* STEP 3 — Build specs */
   const specs={}
   if(type==='3dscan'||type==='lidar'){
     const ac=document.getElementById('u-ac')?.value.trim()
@@ -388,6 +443,7 @@ async function doUpload(){
     specs['Resolution']='4K UHD'
     specs['Processing']='Scene detection & subtitles generated'
   }
+
   const newAsset={
     id:'a'+Date.now(),
     title,
@@ -398,15 +454,15 @@ async function doUpload(){
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
     aiTags:[type,(loc.split(',')[0]||'').trim().toLowerCase()],
     specs,
-    thumbnail: blobUrl,
-    videoUrl: type==='video' ? blobUrl : '',
+    thumbnail:thumbnailUrl,   // for video: frame capture from Blob; for image: blob URL
+    videoUrl:videoUrl,        // for video: actual video blob URL; for image: empty
     uploadedAt:new Date().toISOString().split('T')[0],
     uploadedBy:me.id,
     uploadedByName:me.first+' '+me.last,
     featured:false
   }
 
-  /* STEP 3 — Save metadata to Cosmos DB via Logic App */
+  /* STEP 4 — Save metadata to Cosmos DB */
   try{
     if(USE_LIVE){
       await createAsset(newAsset)
@@ -427,6 +483,7 @@ async function doUpload(){
     goPage('archive')
   }
 }
+
 function resetUpload(){
   ['u-ti','u-de','u-lo','u-ta','u-ac','u-me','u-eq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''})
   document.getElementById('u-ty').value=''
@@ -437,12 +494,20 @@ function resetUpload(){
   document.getElementById('spec-card').classList.add('hidden')
 }
 
-/* EDIT — calls Logic App updateAsset */
+/* ============================================================
+   EDIT — calls Logic App updateAsset
+   ============================================================ */
 function openEditPg(){if(!curAsset)return;const a=curAsset;document.getElementById('e-ti').value=a.title||'';document.getElementById('e-de').value=a.description||'';document.getElementById('e-lo').value=a.location||'';document.getElementById('e-re').value=a.region||'';document.getElementById('e-ty').value=a.type||'image';document.getElementById('e-ta').value=(a.tags||[]).join(', ');goPage('edit')}
 function editFromCard(id){const a=ASSETS.find(x=>x.id===id);if(!a)return;curAsset=a;openEditPg()}
+
 async function doUpdate(){
   if(!curAsset)return
-  const title=document.getElementById('e-ti').value.trim(),desc=document.getElementById('e-de').value.trim(),loc=document.getElementById('e-lo').value.trim(),region=document.getElementById('e-re').value,type=document.getElementById('e-ty').value,tags=document.getElementById('e-ta').value.trim()
+  const title=document.getElementById('e-ti').value.trim()
+  const desc=document.getElementById('e-de').value.trim()
+  const loc=document.getElementById('e-lo').value.trim()
+  const region=document.getElementById('e-re').value
+  const type=document.getElementById('e-ty').value
+  const tags=document.getElementById('e-ta').value.trim()
   if(!title||!loc){toast('Title and location are required.','error');return}
   showLoad()
   const updated={...curAsset,title,description:desc,location:loc,region,type,tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[]}
@@ -470,7 +535,9 @@ async function doUpdate(){
   }
 }
 
-/* DELETE — calls Logic App deleteAsset */
+/* ============================================================
+   DELETE ASSET — calls Logic App deleteAsset
+   ============================================================ */
 function confirmDelAsset(){if(!curAsset)return;openModal('Delete this asset?',`"${curAsset.title}" will be permanently removed from Azure.`,'Delete',()=>execDel(curAsset.id,curAsset.region))}
 function delFromCard(id,title){
   const a=ASSETS.find(x=>x.id===id)
@@ -501,6 +568,10 @@ async function execDel(id,region){
     goPage('archive')
   }
 }
+
+/* ============================================================
+   DELETE USER — admin calls Logic App deleteUser
+   ============================================================ */
 async function delUser(uid,name){
   if(me&&me.id===uid){toast("You can't remove your own account.",'error');return}
   openModal('Remove user?',`"${name}" will be permanently removed from Cosmos DB.`,'Remove',async()=>{
@@ -524,7 +595,10 @@ async function delUser(uid,name){
     }
   })
 }
-/* PROFILE */
+
+/* ============================================================
+   PROFILE — save to Cosmos DB via updateUser Logic App
+   ============================================================ */
 function renderProfile(){
   if(!me){goPage('login');return}
   document.getElementById('p-av-big').textContent=me.first[0].toUpperCase()
@@ -561,21 +635,8 @@ async function saveProfile(){
   if(USERS.find(u=>u.email===em&&u.id!==me.id)){toast('That email is already in use.','error');return}
   showLoad()
   try{
-    const updated={
-      id:me.id,
-      firstName:fn,
-      lastName:ln,
-      email:em,
-      password:me.pw,
-      role:me.role,
-      org:org||'Public',
-      joined:me.joined||''
-    }
-    await fetch(CONFIG.ENDPOINTS.updateUser,{
-      method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(updated)
-    })
+    const updated={id:me.id,firstName:fn,lastName:ln,email:em,password:me.pw,role:me.role,org:org||'Public',joined:me.joined||''}
+    await fetch(CONFIG.ENDPOINTS.updateUser,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(updated)})
     const idx=USERS.findIndex(u=>u.id===me.id)
     if(idx!==-1){USERS[idx]={...USERS[idx],first:fn,last:ln,email:em,org:org||'Public'};me=USERS[idx]}
     document.getElementById('chip-name').textContent=me.first+' '+me.last
@@ -593,6 +654,7 @@ async function saveProfile(){
     renderProfile()
   }
 }
+
 async function changePass(){
   if(!me)return
   const cp=document.getElementById('p-cp').value
@@ -604,21 +666,8 @@ async function changePass(){
   if(np!==np2){toast('New passwords do not match.','error');return}
   showLoad()
   try{
-    const updated={
-      id:me.id,
-      firstName:me.first,
-      lastName:me.last,
-      email:me.email,
-      password:np,
-      role:me.role,
-      org:me.org||'Public',
-      joined:me.joined||''
-    }
-    await fetch(CONFIG.ENDPOINTS.updateUser,{
-      method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(updated)
-    })
+    const updated={id:me.id,firstName:me.first,lastName:me.last,email:me.email,password:np,role:me.role,org:me.org||'Public',joined:me.joined||''}
+    await fetch(CONFIG.ENDPOINTS.updateUser,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(updated)})
     const idx=USERS.findIndex(u=>u.id===me.id)
     if(idx!==-1){USERS[idx].pw=np;me=USERS[idx]}
     ;['p-cp','p-np','p-np2'].forEach(id=>{document.getElementById(id).value=''})
@@ -634,7 +683,9 @@ async function changePass(){
   }
 }
 
-/* ADMIN */
+/* ============================================================
+   ADMIN
+   ============================================================ */
 let adminView='u'
 function adminTab(t){adminView=t;document.getElementById('adv-u').classList.toggle('hidden',t!=='u');document.getElementById('adv-a').classList.toggle('hidden',t!=='a');document.getElementById('adt-u').classList.toggle('active',t==='u');document.getElementById('adt-a').classList.toggle('active',t==='a')}
 function renderAdmin(){
@@ -644,7 +695,9 @@ function renderAdmin(){
   document.getElementById('t-assets').innerHTML=ASSETS.map(a=>`<tr><td style="color:#0c0e1c;font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</td><td>${TL[a.type]||a.type}</td><td>${a.location||'—'}</td><td>${a.uploadedByName||'—'}</td><td>${a.uploadedAt||'—'}</td><td><div class="row-acts"><button class="btn-sm-outline btn-sm" onclick="openDetail('${a.id}')">View</button><button class="btn-danger-sm" onclick="delFromCard('${a.id}','${(a.title||'').replace(/'/g,"\\'")}')">Delete</button></div></td></tr>`).join('')
 }
 
-/* VIEW TOGGLE */
+/* ============================================================
+   VIEW TOGGLE
+   ============================================================ */
 function setView(v){
   curView=v
   document.getElementById('vb-grid').classList.toggle('active',v==='grid')
@@ -653,7 +706,9 @@ function setView(v){
   if(grid){grid.className='grid'+(v==='list'?' list-view':'')}
 }
 
-/* RELATED ASSETS */
+/* ============================================================
+   RELATED ASSETS
+   ============================================================ */
 function renderRelated(a){
   const rel=ASSETS.filter(x=>x.id!==a.id&&(x.type===a.type||x.region===a.region)).slice(0,3)
   const wrap=document.getElementById('det-related'),grid=document.getElementById('related-grid')
@@ -663,7 +718,9 @@ function renderRelated(a){
   grid.innerHTML=rel.map((r,i)=>cardHTML(r,i)).join('')
 }
 
-/* SHARE & DOWNLOAD */
+/* ============================================================
+   SHARE & DOWNLOAD
+   ============================================================ */
 function shareAsset(){
   if(!curAsset)return
   const txt=`HeritageGuard — ${curAsset.title} · ${curAsset.location}`
@@ -677,13 +734,17 @@ function downloadAsset(){
   }else{toast('No downloadable file attached to this record.','warn')}
 }
 
-/* SKELETON LOADING */
+/* ============================================================
+   SKELETON LOADING
+   ============================================================ */
 function renderSkeletons(gridId,count){
   const grid=document.getElementById(gridId);if(!grid)return
   grid.innerHTML=Array.from({length:count},()=>`<div class="skel-card"><div class="skel skel-thumb"></div><div class="skel-body"><div class="skel skel-line long"></div><div class="skel skel-line med"></div><div class="skel skel-line short"></div></div></div>`).join('')
 }
 
-/* ANIMATED COUNTERS */
+/* ============================================================
+   ANIMATED COUNTERS
+   ============================================================ */
 function initCounters(){
   const els=document.querySelectorAll('.hs-n')
   if(!els.length||countersAnimated)return
@@ -718,7 +779,9 @@ function initCounters(){
   if(strip)obs.observe(strip)
 }
 
-/* DRAG & DROP UPLOAD */
+/* ============================================================
+   DRAG & DROP UPLOAD
+   ============================================================ */
 function initDragDrop(){
   const zone=document.getElementById('fzone');if(!zone)return
   zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.borderColor='var(--au2)';zone.style.background='var(--aug)'})
@@ -735,21 +798,27 @@ function initDragDrop(){
   })
 }
 
-/* SCROLL PROGRESS */
+/* ============================================================
+   SCROLL PROGRESS
+   ============================================================ */
 window.addEventListener('scroll',()=>{
   const prog=document.getElementById('scroll-prog');if(!prog)return;
   const scrolled=(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight))*100;
   prog.style.width=Math.min(scrolled,100)+'%';
 },{passive:true})
 
-/* BROWSER BACK / FORWARD */
+/* ============================================================
+   BROWSER BACK / FORWARD
+   ============================================================ */
 window.addEventListener('popstate',e=>{
   if(!e.state){goPage('home',false);return}
   if(e.state.page==='detail'&&e.state.id){openDetail(e.state.id,false)}
   else{goPage(e.state.page||'home',false)}
 })
 
-/* INIT */
+/* ============================================================
+   INIT
+   ============================================================ */
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('modal-ok').addEventListener('click',()=>{const cb=modalCb;closeModal();if(cb)cb()})
   boot()
