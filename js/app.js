@@ -1,4 +1,4 @@
-/* HeritageGuard app.js — final */
+/* HeritageGuard app.js — final with Azure Logic App integration */
 
 let USERS = [
   { id:'u1', first:'Deepak',  last:'Pokhrel',  email:'admin@heritaguard.org',       pw:'admin1234', role:'admin',       org:'HeritageGuard',  joined:'2026-01-10' },
@@ -242,7 +242,7 @@ function doLogout(){
   toast('Signed out.','success');goPage('home')
 }
 
-/* UPLOAD */
+/* UPLOAD — now calls Logic App createAsset */
 function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
 function onFilePick(input){
   const drop=document.getElementById('fzone'),ui=document.getElementById('fzone-ui')
@@ -258,36 +258,123 @@ function onFilePick(input){
     }
   }
 }
-function doUpload(){
+async function doUpload(){
   if(!me){toast('Please sign in first.','error');return}
   const title=document.getElementById('u-ti').value.trim(),desc=document.getElementById('u-de').value.trim(),loc=document.getElementById('u-lo').value.trim(),region=document.getElementById('u-re').value,type=document.getElementById('u-ty').value,tags=document.getElementById('u-ta').value.trim(),file=document.getElementById('u-fi')
   if(!title||!loc||!region||!type){toast('Please fill in all required fields.','error');return}
   if(!file.files[0]){toast('Please select a file.','error');return}
-  showLoad();setTimeout(()=>{
+  showLoad()
+  const specs={}
+  if(type==='3dscan'||type==='lidar'){const ac=document.getElementById('u-ac')?.value.trim(),me2=document.getElementById('u-me')?.value.trim(),eq=document.getElementById('u-eq')?.value.trim();if(ac)specs['Accuracy']=ac;if(me2)specs['Capture method']=me2;if(eq)specs['Equipment']=eq}
+  if(type==='video'){specs['Resolution']='4K UHD';specs['Processing']='Scene detection & subtitles generated'}
+  const newAsset={
+    id:'a'+Date.now(),
+    title,
+    description:desc,
+    location:loc,
+    region,
+    type,
+    tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
+    aiTags:[type,(loc.split(',')[0]||'').trim().toLowerCase()],
+    specs,
+    thumbnail:type==='image'?URL.createObjectURL(file.files[0]):'',
+    uploadedAt:new Date().toISOString().split('T')[0],
+    uploadedBy:me.id,
+    uploadedByName:me.first+' '+me.last,
+    featured:false
+  }
+  try{
+    if(USE_LIVE){
+      await createAsset(newAsset)
+      // Reload from Cosmos DB to get the saved version
+      ASSETS=await getAllAssets()
+    } else {
+      ASSETS.unshift(newAsset)
+    }
     hideLoad()
-    const specs={}
-    if(type==='3dscan'||type==='lidar'){const ac=document.getElementById('u-ac')?.value.trim(),me2=document.getElementById('u-me')?.value.trim(),eq=document.getElementById('u-eq')?.value.trim();if(ac)specs['Accuracy']=ac;if(me2)specs['Capture method']=me2;if(eq)specs['Equipment']=eq}
-    if(type==='video'){specs['Resolution']='4K UHD';specs['Processing']='Scene detection & subtitles generated'}
-    ASSETS.unshift({id:'a'+Date.now(),title,description:desc,location:loc,region,type,tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],aiTags:[type,(loc.split(',')[0]||'').trim().toLowerCase()],specs,thumbnail:type==='image'?URL.createObjectURL(file.files[0]):'',uploadedAt:new Date().toISOString().split('T')[0],uploadedBy:me.id,uploadedByName:me.first+' '+me.last,featured:false})
-    toast('Asset uploaded successfully!','success');resetUpload();goPage('archive')
-  },800)
+    toast('Asset uploaded successfully!','success')
+    resetUpload()
+    goPage('archive')
+  }catch(e){
+    hideLoad()
+    console.error('Upload failed:',e)
+    // Fallback: add locally so UI still works
+    ASSETS.unshift(newAsset)
+    toast('Asset saved locally (API error: '+e.message+')','warn')
+    resetUpload()
+    goPage('archive')
+  }
 }
 function resetUpload(){['u-ti','u-de','u-lo','u-ta','u-ac','u-me','u-eq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('u-ty').value='';document.getElementById('u-re').value='';document.getElementById('u-fi').value='';const drop=document.getElementById('fzone');if(drop)drop.classList.remove('ok');const ui=document.getElementById('fzone-ui');if(ui)ui.innerHTML='<div class="fzone-icon">↑</div><p class="fzone-main">Drag & drop or click to upload</p><p class="fzone-sub">Images · 4K Video · 3D Scans (.obj/.glb) · LiDAR (.las/.laz) · PDF</p>';document.getElementById('spec-card').classList.add('hidden')}
 
-/* EDIT */
+/* EDIT — now calls Logic App updateAsset */
 function openEditPg(){if(!curAsset)return;const a=curAsset;document.getElementById('e-ti').value=a.title||'';document.getElementById('e-de').value=a.description||'';document.getElementById('e-lo').value=a.location||'';document.getElementById('e-re').value=a.region||'';document.getElementById('e-ty').value=a.type||'image';document.getElementById('e-ta').value=(a.tags||[]).join(', ');goPage('edit')}
 function editFromCard(id){const a=ASSETS.find(x=>x.id===id);if(!a)return;curAsset=a;openEditPg()}
-function doUpdate(){
+async function doUpdate(){
   if(!curAsset)return
   const title=document.getElementById('e-ti').value.trim(),desc=document.getElementById('e-de').value.trim(),loc=document.getElementById('e-lo').value.trim(),region=document.getElementById('e-re').value,type=document.getElementById('e-ty').value,tags=document.getElementById('e-ta').value.trim()
   if(!title||!loc){toast('Title and location are required.','error');return}
-  showLoad();setTimeout(()=>{hideLoad();const idx=ASSETS.findIndex(a=>a.id===curAsset.id);if(idx!==-1){ASSETS[idx]={...ASSETS[idx],title,description:desc,location:loc,region,type,tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[]};curAsset=ASSETS[idx]};toast('Asset updated.','success');renderDetBody(curAsset);goPage('detail')},500)
+  showLoad()
+  const updated={...curAsset,title,description:desc,location:loc,region,type,tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[]}
+  try{
+    if(USE_LIVE){
+      await updateAsset(updated.id, updated)
+      // Reload from Cosmos DB to confirm save
+      ASSETS=await getAllAssets()
+      curAsset=ASSETS.find(a=>a.id===updated.id)||updated
+    } else {
+      const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
+      if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
+    }
+    hideLoad()
+    toast('Asset updated and saved to Cosmos DB ✓','success')
+    renderDetBody(curAsset)
+    goPage('detail')
+  }catch(e){
+    hideLoad()
+    console.error('Update failed:',e)
+    // Fallback: update locally
+    const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
+    if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
+    toast('Updated locally (API error: '+e.message+')','warn')
+    renderDetBody(curAsset)
+    goPage('detail')
+  }
 }
 
-/* DELETE */
-function confirmDelAsset(){if(!curAsset)return;openModal('Delete this asset?',`"${curAsset.title}" will be permanently removed.`,'Delete',()=>execDel(curAsset.id))}
-function delFromCard(id,title){openModal('Delete this asset?',`"${title}" will be permanently removed.`,'Delete',()=>execDel(id))}
-function execDel(id){showLoad();setTimeout(()=>{hideLoad();const idx=ASSETS.findIndex(a=>a.id===id);if(idx!==-1)ASSETS.splice(idx,1);if(curAsset&&curAsset.id===id)curAsset=null;toast('Asset deleted.','success');goPage('archive')},400)}
+/* DELETE — now calls Logic App deleteAsset */
+function confirmDelAsset(){if(!curAsset)return;openModal('Delete this asset?',`"${curAsset.title}" will be permanently removed from Azure.`,'Delete',()=>execDel(curAsset.id,curAsset.region))}
+function delFromCard(id,title){
+  const a=ASSETS.find(x=>x.id===id)
+  const region=a?.region||'Asia'
+  openModal('Delete this asset?',`"${title}" will be permanently removed from Azure.`,'Delete',()=>execDel(id,region))
+}
+async function execDel(id,region){
+  showLoad()
+  try{
+    if(USE_LIVE){
+      await deleteAsset(id, region)
+      // Reload from Cosmos DB
+      ASSETS=await getAllAssets()
+    } else {
+      const idx=ASSETS.findIndex(a=>a.id===id)
+      if(idx!==-1)ASSETS.splice(idx,1)
+    }
+    if(curAsset&&curAsset.id===id)curAsset=null
+    hideLoad()
+    toast('Asset deleted from Cosmos DB ✓','success')
+    goPage('archive')
+  }catch(e){
+    hideLoad()
+    console.error('Delete failed:',e)
+    // Fallback: remove locally
+    const idx=ASSETS.findIndex(a=>a.id===id)
+    if(idx!==-1)ASSETS.splice(idx,1)
+    if(curAsset&&curAsset.id===id)curAsset=null
+    toast('Deleted locally (API error: '+e.message+')','warn')
+    goPage('archive')
+  }
+}
 function delUser(uid,name){if(me&&me.id===uid){toast("You can't remove your own account.",'error');return};openModal('Remove user?',`"${name}" will be permanently removed.`,'Remove',()=>{showLoad();setTimeout(()=>{hideLoad();const idx=USERS.findIndex(u=>u.id===uid);if(idx!==-1)USERS.splice(idx,1);toast('User removed.','success');renderAdmin()},400)})}
 
 /* PROFILE */
