@@ -171,8 +171,14 @@ function playVideo(){
   if(!curAsset)return
   const wrap=document.getElementById('det-video-wrap')
   if(!wrap)return
-  if(curAsset.videoUrl){
-    wrap.innerHTML=`<iframe class="det-video-frame" src="${curAsset.videoUrl}?autoplay=1&rel=0&modestbranding=1" frameborder="0" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>`
+  
+  // Use videoUrl if set, otherwise try thumbnail (blob storage URL)
+  const src=curAsset.videoUrl||curAsset.thumbnail||''
+  
+  if(src&&src.startsWith('https://www.youtube.com')){
+    wrap.innerHTML=`<iframe class="det-video-frame" src="${src}?autoplay=1&rel=0&modestbranding=1" frameborder="0" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>`
+  } else if(src&&!src.startsWith('blob:')){
+    wrap.innerHTML=`<video class="det-video-frame" src="${src}" controls autoplay style="width:100%;height:100%;background:#000">Your browser does not support video playback.</video>`
   } else {
     wrap.innerHTML=`<div class="det-video-unavail"><div class="dvu-icon">🎬</div><p class="dvu-title">Streamed via Azure Media Services</p><p class="dvu-sub">This ${curAsset.specs?.Duration||''} documentary is stored in Azure Blob Storage and streamed on demand.</p><button class="btn-outline" onclick="toast('Stream access request sent.','success')">Request Access</button></div>`
   }
@@ -392,7 +398,8 @@ async function doUpload(){
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
     aiTags:[type,(loc.split(',')[0]||'').trim().toLowerCase()],
     specs,
-    thumbnail:blobUrl,
+    thumbnail: blobUrl,
+    videoUrl: type==='video' ? blobUrl : '',
     uploadedAt:new Date().toISOString().split('T')[0],
     uploadedBy:me.id,
     uploadedByName:me.first+' '+me.last,
