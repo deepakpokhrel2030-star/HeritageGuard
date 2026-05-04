@@ -494,8 +494,29 @@ async function execDel(id,region){
     goPage('archive')
   }
 }
-function delUser(uid,name){if(me&&me.id===uid){toast("You can't remove your own account.",'error');return};openModal('Remove user?',`"${name}" will be permanently removed.`,'Remove',()=>{showLoad();setTimeout(()=>{hideLoad();const idx=USERS.findIndex(u=>u.id===uid);if(idx!==-1)USERS.splice(idx,1);toast('User removed.','success');renderAdmin()},400)})}
-
+async function delUser(uid,name){
+  if(me&&me.id===uid){toast("You can't remove your own account.",'error');return}
+  openModal('Remove user?',`"${name}" will be permanently removed from Cosmos DB.`,'Remove',async()=>{
+    showLoad()
+    const u=USERS.find(u=>u.id===uid)
+    try{
+      const url=CONFIG.ENDPOINTS.deleteUser+'&id='+encodeURIComponent(uid)+'&email='+encodeURIComponent(u?.email||'')
+      await fetch(url,{method:'DELETE',headers:{'Content-Type':'application/json'}})
+      const idx=USERS.findIndex(u=>u.id===uid)
+      if(idx!==-1)USERS.splice(idx,1)
+      hideLoad()
+      toast('User removed from Cosmos DB ✓','success')
+      renderAdmin()
+    }catch(e){
+      hideLoad()
+      console.error('Delete user error:',e)
+      const idx=USERS.findIndex(u=>u.id===uid)
+      if(idx!==-1)USERS.splice(idx,1)
+      toast('User removed locally (API error)','warn')
+      renderAdmin()
+    }
+  })
+}
 /* PROFILE */
 function renderProfile(){
   if(!me){goPage('login');return}
@@ -522,21 +543,88 @@ function profileTab(t){
   document.getElementById('pnav-account').classList.toggle('active',t==='account')
   document.getElementById('pnav-uploads').classList.toggle('active',t==='uploads')
 }
-function saveProfile(){
+
+async function saveProfile(){
   if(!me)return
-  const fn=document.getElementById('p-fn').value.trim(),ln=document.getElementById('p-ln').value.trim(),em=document.getElementById('p-em').value.trim(),org=document.getElementById('p-org').value.trim()
+  const fn=document.getElementById('p-fn').value.trim()
+  const ln=document.getElementById('p-ln').value.trim()
+  const em=document.getElementById('p-em').value.trim()
+  const org=document.getElementById('p-org').value.trim()
   if(!fn||!ln||!em){toast('Name and email are required.','error');return}
   if(USERS.find(u=>u.email===em&&u.id!==me.id)){toast('That email is already in use.','error');return}
-  showLoad();setTimeout(()=>{hideLoad();const idx=USERS.findIndex(u=>u.id===me.id);if(idx!==-1){USERS[idx]={...USERS[idx],first:fn,last:ln,email:em,org:org||'Public'};me=USERS[idx]};document.getElementById('chip-name').textContent=me.first+' '+me.last;document.getElementById('chip-av').textContent=me.first[0].toUpperCase();toast('Profile updated!','success');renderProfile()},500)
+  showLoad()
+  try{
+    const updated={
+      id:me.id,
+      firstName:fn,
+      lastName:ln,
+      email:em,
+      password:me.pw,
+      role:me.role,
+      org:org||'Public',
+      joined:me.joined||''
+    }
+    await fetch(CONFIG.ENDPOINTS.updateUser,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(updated)
+    })
+    const idx=USERS.findIndex(u=>u.id===me.id)
+    if(idx!==-1){USERS[idx]={...USERS[idx],first:fn,last:ln,email:em,org:org||'Public'};me=USERS[idx]}
+    document.getElementById('chip-name').textContent=me.first+' '+me.last
+    document.getElementById('chip-av').textContent=me.first[0].toUpperCase()
+    hideLoad()
+    toast('Profile saved to Cosmos DB ✓','success')
+    renderProfile()
+  }catch(e){
+    hideLoad()
+    console.error('Profile update error:',e)
+    const idx=USERS.findIndex(u=>u.id===me.id)
+    if(idx!==-1){USERS[idx]={...USERS[idx],first:fn,last:ln,email:em,org:org||'Public'};me=USERS[idx]}
+    document.getElementById('chip-name').textContent=me.first+' '+me.last
+    toast('Profile updated locally (API error)','warn')
+    renderProfile()
+  }
 }
-function changePass(){
+async function changePass(){
   if(!me)return
-  const cp=document.getElementById('p-cp').value,np=document.getElementById('p-np').value,np2=document.getElementById('p-np2').value
+  const cp=document.getElementById('p-cp').value
+  const np=document.getElementById('p-np').value
+  const np2=document.getElementById('p-np2').value
   if(!cp||!np||!np2){toast('Please fill in all password fields.','error');return}
   if(cp!==me.pw){toast('Current password is incorrect.','error');return}
   if(np.length<8){toast('New password must be at least 8 characters.','error');return}
   if(np!==np2){toast('New passwords do not match.','error');return}
-  showLoad();setTimeout(()=>{hideLoad();const idx=USERS.findIndex(u=>u.id===me.id);if(idx!==-1){USERS[idx].pw=np;me=USERS[idx]};['p-cp','p-np','p-np2'].forEach(id=>{document.getElementById(id).value=''});toast('Password updated successfully!','success')},500)
+  showLoad()
+  try{
+    const updated={
+      id:me.id,
+      firstName:me.first,
+      lastName:me.last,
+      email:me.email,
+      password:np,
+      role:me.role,
+      org:me.org||'Public',
+      joined:me.joined||''
+    }
+    await fetch(CONFIG.ENDPOINTS.updateUser,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(updated)
+    })
+    const idx=USERS.findIndex(u=>u.id===me.id)
+    if(idx!==-1){USERS[idx].pw=np;me=USERS[idx]}
+    ;['p-cp','p-np','p-np2'].forEach(id=>{document.getElementById(id).value=''})
+    hideLoad()
+    toast('Password updated in Cosmos DB ✓','success')
+  }catch(e){
+    hideLoad()
+    console.error('Password update error:',e)
+    const idx=USERS.findIndex(u=>u.id===me.id)
+    if(idx!==-1){USERS[idx].pw=np;me=USERS[idx]}
+    ;['p-cp','p-np','p-np2'].forEach(id=>{document.getElementById(id).value=''})
+    toast('Password updated locally (API error)','warn')
+  }
 }
 
 /* ADMIN */
