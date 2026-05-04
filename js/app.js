@@ -1,4 +1,4 @@
-/* HeritageGuard app.js — final with Azure Logic App integration */
+/* HeritageGuard app.js — final with Azure Logic App + Blob Storage integration */
 
 let USERS = [
   { id:'u1', first:'Deepak',  last:'Pokhrel',  email:'admin@heritaguard.org',       pw:'admin1234', role:'admin',       org:'HeritageGuard',  joined:'2026-01-10' },
@@ -18,7 +18,6 @@ async function boot(){
   goPage('home',false)
   renderSkeletons('featured-grid',4)
   try{ASSETS=USE_LIVE?await getAllAssets():await fetch('assets.json').then(r=>r.json())}catch(e){ASSETS=[];console.warn(e)}
-  /* restore saved session */
   try{
     const saved=localStorage.getItem('hg_session')
     if(saved){const {id}=JSON.parse(saved);const u=USERS.find(u=>u.id===id);if(u)signIn(u,true)}
@@ -175,7 +174,7 @@ function playVideo(){
   if(curAsset.videoUrl){
     wrap.innerHTML=`<iframe class="det-video-frame" src="${curAsset.videoUrl}?autoplay=1&rel=0&modestbranding=1" frameborder="0" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>`
   } else {
-    wrap.innerHTML=`<div class="det-video-unavail"><div class="dvu-icon">🎬</div><p class="dvu-title">Streamed via Azure Media Services</p><p class="dvu-sub">This ${curAsset.specs?.Duration||''} documentary is stored in Azure Blob Storage and streamed on demand. Connect the Azure Media Services endpoint in config.js to enable playback.</p><button class="btn-outline" onclick="toast('Stream access request sent.','success')">Request Access</button></div>`
+    wrap.innerHTML=`<div class="det-video-unavail"><div class="dvu-icon">🎬</div><p class="dvu-title">Streamed via Azure Media Services</p><p class="dvu-sub">This ${curAsset.specs?.Duration||''} documentary is stored in Azure Blob Storage and streamed on demand.</p><button class="btn-outline" onclick="toast('Stream access request sent.','success')">Request Access</button></div>`
   }
 }
 
@@ -221,7 +220,7 @@ function checkStrength(val){
   bar.style.width=lvl.w;bar.style.background=lvl.c
   lbl.textContent=lvl.l;lbl.style.color=lvl.c
 }
-function signIn(u, silent=false){
+function signIn(u,silent=false){
   me=u
   document.getElementById('nav-guest').classList.add('hidden')
   document.getElementById('nav-user').classList.remove('hidden')
@@ -242,7 +241,10 @@ function doLogout(){
   toast('Signed out.','success');goPage('home')
 }
 
-/* UPLOAD — now calls Logic App createAsset */
+/* ============================================================
+   UPLOAD — Step 1: upload file to Azure Blob Storage
+             Step 2: save metadata to Cosmos DB via Logic App
+   ============================================================ */
 function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
 function onFilePick(input){
   const drop=document.getElementById('fzone'),ui=document.getElementById('fzone-ui')
@@ -260,13 +262,58 @@ function onFilePick(input){
 }
 async function doUpload(){
   if(!me){toast('Please sign in first.','error');return}
-  const title=document.getElementById('u-ti').value.trim(),desc=document.getElementById('u-de').value.trim(),loc=document.getElementById('u-lo').value.trim(),region=document.getElementById('u-re').value,type=document.getElementById('u-ty').value,tags=document.getElementById('u-ta').value.trim(),file=document.getElementById('u-fi')
+  const title=document.getElementById('u-ti').value.trim()
+  const desc=document.getElementById('u-de').value.trim()
+  const loc=document.getElementById('u-lo').value.trim()
+  const region=document.getElementById('u-re').value
+  const type=document.getElementById('u-ty').value
+  const tags=document.getElementById('u-ta').value.trim()
+  const file=document.getElementById('u-fi')
   if(!title||!loc||!region||!type){toast('Please fill in all required fields.','error');return}
   if(!file.files[0]){toast('Please select a file.','error');return}
   showLoad()
+  toast('Uploading to Azure Blob Storage...','success')
+
+  /* STEP 1 — Upload binary file to Azure Blob Storage */
+  let blobUrl=''
+  try{
+    const f=file.files[0]
+    const blobName=Date.now()+'-'+f.name.replace(/\s+/g,'-')
+    const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
+    const uploadRes=await fetch(uploadUrl,{
+      method:'PUT',
+      headers:{
+        'x-ms-blob-type':'BlockBlob',
+        'Content-Type':f.type||'application/octet-stream'
+      },
+      body:f
+    })
+    if(uploadRes.ok){
+      blobUrl=CONFIG.BLOB.baseUrl+'/'+blobName
+      toast('File uploaded to Azure Blob Storage ✓','success')
+    }else{
+      console.warn('Blob upload failed:',uploadRes.status,uploadRes.statusText)
+      toast('Blob upload failed ('+uploadRes.status+') — saving without thumbnail','warn')
+    }
+  }catch(e){
+    console.error('Blob upload error:',e)
+    toast('Blob upload failed — saving without thumbnail','warn')
+  }
+
+  /* STEP 2 — Build asset with Azure Blob URL as thumbnail (persists after refresh!) */
   const specs={}
-  if(type==='3dscan'||type==='lidar'){const ac=document.getElementById('u-ac')?.value.trim(),me2=document.getElementById('u-me')?.value.trim(),eq=document.getElementById('u-eq')?.value.trim();if(ac)specs['Accuracy']=ac;if(me2)specs['Capture method']=me2;if(eq)specs['Equipment']=eq}
-  if(type==='video'){specs['Resolution']='4K UHD';specs['Processing']='Scene detection & subtitles generated'}
+  if(type==='3dscan'||type==='lidar'){
+    const ac=document.getElementById('u-ac')?.value.trim()
+    const me2=document.getElementById('u-me')?.value.trim()
+    const eq=document.getElementById('u-eq')?.value.trim()
+    if(ac)specs['Accuracy']=ac
+    if(me2)specs['Capture method']=me2
+    if(eq)specs['Equipment']=eq
+  }
+  if(type==='video'){
+    specs['Resolution']='4K UHD'
+    specs['Processing']='Scene detection & subtitles generated'
+  }
   const newAsset={
     id:'a'+Date.now(),
     title,
@@ -277,37 +324,45 @@ async function doUpload(){
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
     aiTags:[type,(loc.split(',')[0]||'').trim().toLowerCase()],
     specs,
-    thumbnail:type==='image'?URL.createObjectURL(file.files[0]):'',
+    thumbnail:blobUrl,
     uploadedAt:new Date().toISOString().split('T')[0],
     uploadedBy:me.id,
     uploadedByName:me.first+' '+me.last,
     featured:false
   }
+
+  /* STEP 3 — Save metadata to Cosmos DB via Logic App */
   try{
     if(USE_LIVE){
       await createAsset(newAsset)
-      // Reload from Cosmos DB to get the saved version
       ASSETS=await getAllAssets()
-    } else {
+    }else{
       ASSETS.unshift(newAsset)
     }
     hideLoad()
-    toast('Asset uploaded successfully!','success')
+    toast('Asset uploaded to Azure successfully! ✓','success')
     resetUpload()
     goPage('archive')
   }catch(e){
     hideLoad()
-    console.error('Upload failed:',e)
-    // Fallback: add locally so UI still works
+    console.error('Metadata save failed:',e)
     ASSETS.unshift(newAsset)
-    toast('Asset saved locally (API error: '+e.message+')','warn')
+    toast('Saved locally (API error: '+e.message+')','warn')
     resetUpload()
     goPage('archive')
   }
 }
-function resetUpload(){['u-ti','u-de','u-lo','u-ta','u-ac','u-me','u-eq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});document.getElementById('u-ty').value='';document.getElementById('u-re').value='';document.getElementById('u-fi').value='';const drop=document.getElementById('fzone');if(drop)drop.classList.remove('ok');const ui=document.getElementById('fzone-ui');if(ui)ui.innerHTML='<div class="fzone-icon">↑</div><p class="fzone-main">Drag & drop or click to upload</p><p class="fzone-sub">Images · 4K Video · 3D Scans (.obj/.glb) · LiDAR (.las/.laz) · PDF</p>';document.getElementById('spec-card').classList.add('hidden')}
+function resetUpload(){
+  ['u-ti','u-de','u-lo','u-ta','u-ac','u-me','u-eq'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''})
+  document.getElementById('u-ty').value=''
+  document.getElementById('u-re').value=''
+  document.getElementById('u-fi').value=''
+  const drop=document.getElementById('fzone');if(drop)drop.classList.remove('ok')
+  const ui=document.getElementById('fzone-ui');if(ui)ui.innerHTML='<div class="fzone-icon">↑</div><p class="fzone-main">Drag & drop or click to upload</p><p class="fzone-sub">Images · 4K Video · 3D Scans (.obj/.glb) · LiDAR (.las/.laz) · PDF</p>'
+  document.getElementById('spec-card').classList.add('hidden')
+}
 
-/* EDIT — now calls Logic App updateAsset */
+/* EDIT — calls Logic App updateAsset */
 function openEditPg(){if(!curAsset)return;const a=curAsset;document.getElementById('e-ti').value=a.title||'';document.getElementById('e-de').value=a.description||'';document.getElementById('e-lo').value=a.location||'';document.getElementById('e-re').value=a.region||'';document.getElementById('e-ty').value=a.type||'image';document.getElementById('e-ta').value=(a.tags||[]).join(', ');goPage('edit')}
 function editFromCard(id){const a=ASSETS.find(x=>x.id===id);if(!a)return;curAsset=a;openEditPg()}
 async function doUpdate(){
@@ -318,11 +373,10 @@ async function doUpdate(){
   const updated={...curAsset,title,description:desc,location:loc,region,type,tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[]}
   try{
     if(USE_LIVE){
-      await updateAsset(updated.id, updated)
-      // Reload from Cosmos DB to confirm save
+      await updateAsset(updated.id,updated)
       ASSETS=await getAllAssets()
       curAsset=ASSETS.find(a=>a.id===updated.id)||updated
-    } else {
+    }else{
       const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
       if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
     }
@@ -333,7 +387,6 @@ async function doUpdate(){
   }catch(e){
     hideLoad()
     console.error('Update failed:',e)
-    // Fallback: update locally
     const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
     if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
     toast('Updated locally (API error: '+e.message+')','warn')
@@ -342,7 +395,7 @@ async function doUpdate(){
   }
 }
 
-/* DELETE — now calls Logic App deleteAsset */
+/* DELETE — calls Logic App deleteAsset */
 function confirmDelAsset(){if(!curAsset)return;openModal('Delete this asset?',`"${curAsset.title}" will be permanently removed from Azure.`,'Delete',()=>execDel(curAsset.id,curAsset.region))}
 function delFromCard(id,title){
   const a=ASSETS.find(x=>x.id===id)
@@ -353,10 +406,9 @@ async function execDel(id,region){
   showLoad()
   try{
     if(USE_LIVE){
-      await deleteAsset(id, region)
-      // Reload from Cosmos DB
+      await deleteAsset(id,region)
       ASSETS=await getAllAssets()
-    } else {
+    }else{
       const idx=ASSETS.findIndex(a=>a.id===id)
       if(idx!==-1)ASSETS.splice(idx,1)
     }
@@ -367,7 +419,6 @@ async function execDel(id,region){
   }catch(e){
     hideLoad()
     console.error('Delete failed:',e)
-    // Fallback: remove locally
     const idx=ASSETS.findIndex(a=>a.id===id)
     if(idx!==-1)ASSETS.splice(idx,1)
     if(curAsset&&curAsset.id===id)curAsset=null
