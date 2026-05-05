@@ -10,12 +10,17 @@ const CONFIG={
     updateUser:'https://prod-19.italynorth.logic.azure.com:443/workflows/89fa7c4b72f747878b8e3344fabb3a15/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=CkcmlrIN90Y6KzqetoCAHNr9DXUbnwH8yKbU29mZiYA',
     deleteUser:'https://prod-20.italynorth.logic.azure.com:443/workflows/5724498d6572483692cd765c0b97d109/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=O47hE3zxQ0iPF7pDPqPkSjBdtbtgLpxtdOABgLk1pmk'
   },
- BLOB:{
+  BLOB:{
     baseUrl:'https://stheritaguard916368.blob.core.windows.net/media',
     sasToken:'?sv=2025-11-05&ss=bfqt&srt=o&sp=rwdlacupiytfx&se=2027-05-04T21:56:26Z&st=2026-05-04T13:41:26Z&spr=https&sig=aX0v7%2F8lcLM9QAJJBgq%2B%2Bs27qVNFA9aCq50H3CEp5Gk%3D'
   },
   CV:{
-  endpoint:'https://cv-heritaguard.cognitiveservices.azure.com/',
-  key:'31zi8XupnyJu7MGEq'+'wo78z9zIQOfsKJWXvguIWMxKr76HrDupccVJQQJ99CEACgEuAYXJ3w3AAAFACOGXtvM'
-}
+    endpoint:'https://cv-heritaguard.cognitiveservices.azure.com/',
+    key:'31zi8XupnyJu7MGEq'+'wo78z9zIQOfsKJWXvguIWMxKr76HrDupccVJQQJ99CEACgEuAYXJ3w3AAAFACOGXtvM'
+  },
+  SEARCH:{
+    endpoint:'https://search-heritaguard.search.windows.net',
+    key:'W6yNCIPFdAc7ypm3A6z5CdhiFX4pPb5NYKb'+'izizZiCAzSeAXMoK2',
+    index:'assets-index'
+  }
 }
