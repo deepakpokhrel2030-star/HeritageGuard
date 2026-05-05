@@ -494,12 +494,14 @@ async function doUpload(){
       thumbnailUrl=''
     }
   } else if(type==='image'&&blobUrl){
-    /* Run Azure Computer Vision to auto-tag the image */
-    const cvTags=await analyseImageWithCV(blobUrl)
-    if(cvTags.length>0){
-      aiTags=[...new Set([...aiTags,...cvTags])]
-    }
+  /* Wait for blob to be fully available before CV analysis */
+  await new Promise(resolve=>setTimeout(resolve,2000))
+  /* Run Azure Computer Vision to auto-tag the image */
+  const cvTags=await analyseImageWithCV(blobUrl)
+  if(cvTags.length>0){
+    aiTags=[...new Set([...aiTags,...cvTags])]
   }
+}
 
   /* STEP 3 — Build specs */
   const specs={}
