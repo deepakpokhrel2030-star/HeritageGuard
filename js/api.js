@@ -1,4 +1,3 @@
-/* api.js */
 async function getAllAssets(){
   const r=await fetch(CONFIG.ENDPOINTS.getAssets,{method:'GET',headers:{'Content-Type':'application/json'}});
   if(!r.ok)throw new Error(r.status);
