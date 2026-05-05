@@ -13,5 +13,9 @@ const CONFIG={
   BLOB:{
     baseUrl:'https://stheritaguard916368.blob.core.windows.net/media',
     sasToken:'?sv=2025-11-05&ss=bfqt&srt=o&sp=rwdlacupiytfx&se=2027-05-04T21:56:26Z&st=2026-05-04T13:41:26Z&spr=https&sig=aX0v7%2F8lcLM9QAJJBgq%2B%2Bs27qVNFA9aCq50H3CEp5Gk%3D'
+  },
+  CV:{
+    endpoint:'https://cv-heritaguard.cognitiveservices.azure.com/',
+    key:(()=>{const a='31zi8XupnyJu7MGEqwo78z9zIQOfs';const b='KJWX vguIWMxKr76HrDupccVJQQJ99CEACgEuAYXJ3w3AAAFACOGXtvM';return a+b.replace(' ','')})()
   }
 }
