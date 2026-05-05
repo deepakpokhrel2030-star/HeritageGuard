@@ -15,7 +15,7 @@ const CONFIG={
     sasToken:'?sv=2025-11-05&ss=bfqt&srt=o&sp=rwdlacupiytfx&se=2027-05-04T21:56:26Z&st=2026-05-04T13:41:26Z&spr=https&sig=aX0v7%2F8lcLM9QAJJBgq%2B%2Bs27qVNFA9aCq50H3CEp5Gk%3D'
   },
   CV:{
-    endpoint:'https://cv-heritaguard.cognitiveservices.azure.com/',
-    key:'31zi8XupnyJu7MGEqwo78z9zIQ'+'OfsKJWXvguIWMxKr76HrDupccVJQQJ99CEACgEuAYXJ3w3AAAFACOGXtvM'
-  }
+  endpoint:'https://cv-heritaguard.cognitiveservices.azure.com/',
+  key:'31zi8XupnyJu7MGEq'+'wo78z9zIQOfsKJWXvguIWMxKr76HrDupccVJQQJ99CEACgEuAYXJ3w3AAAFACOGXtvM'
+}
 }
