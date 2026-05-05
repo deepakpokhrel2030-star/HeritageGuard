@@ -19,8 +19,7 @@ const CONFIG={
     key:'31zi8XupnyJu7MGEq'+'wo78z9zIQOfsKJWXvguIWMxKr76HrDupccVJQQJ99CEACgEuAYXJ3w3AAAFACOGXtvM'
   },
   SEARCH:{
-    endpoint:'https://search-heritaguard.search.windows.net',
-    key:'W6yNCIPFdAc7ypm3A6z5CdhiFX4pPb5NYKb'+'izizZiCAzSeAXMoK2',
+    endpoint:'https://prod-11.italynorth.logic.azure.com:443/workflows/7d69e908d0b541f0980d56ed710bf5c2/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=2j9A589YcdSBQo070kMdPw8kjOa3MpB8aM2fDzgT0O8',
     index:'assets-index'
   }
 }

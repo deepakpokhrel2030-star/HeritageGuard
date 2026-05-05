@@ -84,31 +84,20 @@
     AZURE AI SEARCH — semantic search across all asset metadata
     ============================================================ */
   async function searchWithAzureAI(query){
-    try{
-      const url=CONFIG.SEARCH.endpoint+'/indexes/'+CONFIG.SEARCH.index+'/docs/search?api-version=2023-11-01'
-      const r=await fetch(url,{
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'api-key':CONFIG.SEARCH.key
-        },
-        body:JSON.stringify({
-          search:query,
-          queryType:'simple',
-          searchFields:'title,description,location,region,type,tags,aiTags,uploadedByName',
-          select:'id,title,location,region,type,thumbnail,videoUrl,uploadedAt,uploadedByName,tags,aiTags,featured',
-          top:50,
-          count:true
-        })
-      })
-      if(!r.ok)return null
-      const data=await r.json()
-      return data.value||[]
-    }catch(e){
-      console.error('Azure Search error:',e)
-      return null
-    }
+  try{
+    const r=await fetch(CONFIG.SEARCH.endpoint,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({search:query})
+    })
+    if(!r.ok)return null
+    const data=await r.json()
+    return data.value||[]
+  }catch(e){
+    console.error('Azure Search error:',e)
+    return null
   }
+}
 
   /* ============================================================
     ARCHIVE
