@@ -776,46 +776,113 @@ async function doUpdate(){
   if(!title||!loc){toast('Title and location are required.','error');return}
   showLoad()
 
-  /* Upload new file if selected */
+  /* Keep existing values as defaults */
   let thumbnailUrl=curAsset.thumbnail
   let videoUrl=curAsset.videoUrl||''
+  let aiTags=curAsset.aiTags||[]
+  let specs={...curAsset.specs||{}}
+  let contentSafe=curAsset.contentSafe!==false
 
+  /* If new file selected — run full pipeline */
   if(file&&file.files[0]){
-    toast('Uploading new file to Azure Blob Storage...','success')
+
+    /* STEP 1 — Content Safety on new metadata */
+    toast('Screening content with Azure Content Safety...','success')
+    const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
+    if(!safetyResult.safe){
+      hideLoad()
+      toast('Update blocked by Azure Content Safety: '+safetyResult.reasons,'error')
+      return
+    }
+    toast('Content Safety check passed ✓','success')
+    contentSafe=true
+
+    /* STEP 2 — Upload new file to Blob Storage */
+    let newBlobUrl=''
     try{
       const f=file.files[0]
       const blobName=Date.now()+'-'+f.name.replace(/\s+/g,'-')
       const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
-      await new Promise((resolve,reject)=>{
+      const sizeMB=(f.size/1024/1024).toFixed(1)
+      toast('Uploading new file to Azure Blob Storage...','success')
+      newBlobUrl=await new Promise((resolve,reject)=>{
         const xhr=new XMLHttpRequest()
         xhr.open('PUT',uploadUrl)
         xhr.setRequestHeader('x-ms-blob-type','BlockBlob')
         xhr.setRequestHeader('Content-Type',f.type||'application/octet-stream')
+        xhr.upload.addEventListener('progress',e=>{
+          if(e.lengthComputable){
+            const pct=Math.round((e.loaded/e.total)*100)
+            toast(`Uploading: ${pct}% (${(e.loaded/1024/1024).toFixed(1)}MB / ${sizeMB}MB)`,'success')
+          }
+        })
         xhr.addEventListener('load',()=>{
-          if(xhr.status===201||xhr.status===200){resolve()}
+          if(xhr.status===201||xhr.status===200){resolve(CONFIG.BLOB.baseUrl+'/'+blobName)}
           else{reject(new Error('Upload failed: '+xhr.status))}
         })
         xhr.addEventListener('error',()=>reject(new Error('Network error')))
         xhr.send(f)
       })
-      const newBlobUrl=CONFIG.BLOB.baseUrl+'/'+blobName
+      toast('File uploaded to Azure Blob Storage ✓','success')
+    }catch(e){
+      console.error('Blob upload error:',e)
+      toast('File upload failed — keeping existing file','warn')
+    }
+
+    /* STEP 3 — Video: thumbnail + Video Indexer | Image: Computer Vision */
+    if(newBlobUrl){
       if(type==='video'){
         videoUrl=newBlobUrl
-        try{thumbnailUrl=await generateVideoThumbnail(f)}
-        catch(e){thumbnailUrl=newBlobUrl}
+        toast('Generating video thumbnail...','success')
+        try{
+          thumbnailUrl=await generateVideoThumbnail(file.files[0])
+          toast('Video thumbnail generated ✓','success')
+        }catch(e){thumbnailUrl=newBlobUrl}
+        toast('Submitting to Azure Video Indexer...','success')
+        try{
+          const viToken=await getVideoIndexerToken()
+          if(viToken){
+            const viId=await submitVideoToIndexer(newBlobUrl,title,viToken)
+            if(viId){
+              specs['Video Indexer ID']=viId
+              specs['VI Status']='Processing — scene detection & transcript in progress'
+              specs['Resolution']='4K UHD'
+              specs['Processing']='Azure Video Indexer — scene detection, transcript & keyword extraction'
+              toast('Azure Video Indexer processing started ✓','success')
+            }
+          }
+        }catch(e){console.warn('Video Indexer error:',e)}
+      } else if(type==='image'){
+        thumbnailUrl=newBlobUrl
+        await new Promise(resolve=>setTimeout(resolve,2000))
+        const cvTags=await analyseImageWithCV(newBlobUrl)
+        if(cvTags.length>0){
+          aiTags=[...new Set([type,(loc.split(',')[0]||'').trim().toLowerCase(),...cvTags])]
+          toast('AI tags updated via Computer Vision ✓','success')
+        }
       } else {
         thumbnailUrl=newBlobUrl
       }
-      toast('File replaced in Azure Blob Storage ✓','success')
-    }catch(e){
-      console.error('File upload error:',e)
-      toast('File upload failed — keeping existing file','warn')
     }
+  } else {
+    /* No new file — still re-run Content Safety on updated text */
+    toast('Checking content safety...','success')
+    const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
+    if(!safetyResult.safe){
+      hideLoad()
+      toast('Update blocked by Azure Content Safety: '+safetyResult.reasons,'error')
+      return
+    }
+    contentSafe=true
+    toast('Content Safety check passed ✓','success')
   }
 
-  const updated={...curAsset,title,description:desc,location:loc,region,type,
+  const updated={
+    ...curAsset,
+    title,description:desc,location:loc,region,type,
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
-    thumbnail:thumbnailUrl,videoUrl}
+    aiTags,specs,thumbnail:thumbnailUrl,videoUrl,contentSafe
+  }
 
   try{
     if(USE_LIVE){
@@ -834,7 +901,6 @@ async function doUpdate(){
     toast('Updated locally (API error: '+e.message+')','warn');renderDetBody(curAsset);goPage('detail')
   }
 }
-
 /* ============================================================
    DELETE ASSET
    ============================================================ */
