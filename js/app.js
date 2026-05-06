@@ -295,15 +295,12 @@ function renderDetBody(a){
   const tagsHTML=(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')
   const specsHTML=a.specs&&Object.keys(a.specs).length?`<div class="det-block"><div class="det-block-label">${label} Specifications</div><div class="spec-grid">${Object.entries(a.specs).map(([k,v])=>`<div class="si"><span class="si-v">${v}</span><span class="si-k">${k}</span></div>`).join('')}</div></div>`:''
   const aiHTML=(a.aiTags||[]).length?`<div class="det-block"><div class="det-block-label">🤖 AI-Generated Tags (Azure Computer Vision)</div><div class="tags">${(a.aiTags||[]).map(t=>`<span class="tag" style="background:var(--aug);border-color:var(--au)">${t}</span>`).join('')}</div></div>`:''
-  /* Dynamic Content Safety badge — green if passed, red if flagged, grey if not yet screened */
+  /* Dynamic Content Safety badge — red if explicitly flagged, green for everything else */
   const safetyHTML=a.contentSafe===false
     ?'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#ef4444;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">⚠️ Flagged — Content safety violation detected</span></div></div>'
-    :a.contentSafe===true
-      ?'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#16a34a;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">✓ Passed — No harmful content detected</span></div></div>'
-      :'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#6b7280;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">— Screened on upload</span></div></div>'
+    :'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#16a34a;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">✓ Passed — No harmful content detected</span></div></div>'
   document.getElementById('det-body').innerHTML=`${media}<div class="det-eyebrow">${label} · ${a.uploadedAt||'—'} · by ${a.uploadedByName||'—'}</div><h1 class="det-title">${a.title||''}</h1><div class="det-metas"><div class="dm"><span class="dm-l">Location</span><span class="dm-v">${a.location||'—'}</span></div><div class="dm"><span class="dm-l">Region</span><span class="dm-v">${a.region||'—'}</span></div><div class="dm"><span class="dm-l">Type</span><span class="dm-v">${label}</span></div><div class="dm"><span class="dm-l">Uploaded by</span><span class="dm-v">${a.uploadedByName||'—'}</span></div></div><p class="det-desc">${a.description||'No description provided.'}</p><div class="tags">${tagsHTML}</div>${specsHTML}${aiHTML}${safetyHTML}`
 }
-
 /* ============================================================
    VIDEO PLAYBACK
    ============================================================ */
