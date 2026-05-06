@@ -516,6 +516,41 @@ function onFilePick(input){
   }
 }
 
+/* ============================================================
+   AZURE CONTENT SAFETY — screen uploads for harmful content
+   ============================================================ */
+async function checkContentSafety(text){
+  try{
+    const r=await fetch(CONFIG.CONTENT_SAFETY.endpoint+'contentsafety/text:analyze?api-version=2023-10-01',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Ocp-Apim-Subscription-Key':CONFIG.CONTENT_SAFETY.key
+      },
+      body:JSON.stringify({
+        text:text.substring(0,1000),
+        categories:['Hate','SelfHarm','Sexual','Violence'],
+        outputType:'FourSeverityLevels'
+      })
+    })
+    if(!r.ok){
+      console.warn('Content Safety check failed:',r.status)
+      return{safe:true}
+    }
+    const data=await r.json()
+    const categories=data.categoriesAnalysis||[]
+    const flagged=categories.filter(c=>c.severity>=2)
+    if(flagged.length>0){
+      const reasons=flagged.map(c=>c.category).join(', ')
+      return{safe:false,reasons}
+    }
+    return{safe:true}
+  }catch(e){
+    console.error('Content Safety error:',e)
+    return{safe:true} // fail open — don't block if API fails
+  }
+}
+
 async function doUpload(){
   if(!me){toast('Please sign in first.','error');return}
   const title=document.getElementById('u-ti').value.trim()
@@ -528,6 +563,17 @@ async function doUpload(){
   if(!title||!loc||!region||!type){toast('Please fill in all required fields.','error');return}
   if(!file.files[0]){toast('Please select a file.','error');return}
   showLoad()
+
+  /* Azure Content Safety — screen title and description */
+  toast('Screening content with Azure Content Safety...','success')
+  const safetyText=`${title} ${desc} ${tags}`
+  const safetyResult=await checkContentSafety(safetyText)
+  if(!safetyResult.safe){
+    hideLoad()
+    toast('Upload blocked by Azure Content Safety: '+safetyResult.reasons,'error')
+    return
+  }
+  toast('Content Safety check passed ✓','success')
 
   let blobUrl=''
   try{

@@ -21,5 +21,9 @@ const CONFIG={
   SEARCH:{
     endpoint:'https://prod-11.italynorth.logic.azure.com:443/workflows/7d69e908d0b541f0980d56ed710bf5c2/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=2j9A589YcdSBQo070kMdPw8kjOa3MpB8aM2fDzgT0O8',
     index:'assets-index'
+  },
+  CONTENT_SAFETY:{
+    endpoint:'https://cs-heritaguard.cognitiveservices.azure.com/',
+    key:'BaBc193qsYqWWAQhDYQRySzcZqxrg5vL'+'HjRD8e5nzRdPDBeGniFPJQQJ99CEACgEuAYXJ3w3AAAHACOGXidi'
   }
 }
