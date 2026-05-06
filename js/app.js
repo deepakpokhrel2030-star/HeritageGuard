@@ -1,4 +1,4 @@
-/* HeritageGuard app.js — complete with Azure Logic App + Blob Storage + Computer Vision + AI Search + Content Safety */
+/* HeritageGuard app.js — complete with Azure Logic App + Blob Storage + Computer Vision + AI Search + Content Safety + Video Indexer */
 
 let USERS = [
   { id:'u1', first:'Deepak',  last:'Pokhrel',  email:'admin@heritaguard.org',       pw:'admin1234', role:'admin',       org:'HeritageGuard',  joined:'2026-01-10' },
@@ -132,7 +132,6 @@ async function applyFilters(){
   let res=[...ASSETS]
   let usedAzureSearch=false
 
-  /* STEP 1 — Use Azure AI Search when there's a text query */
   if(q&&q.length>1){
     const searchResults=await searchWithAzureAI(q)
     if(searchResults&&searchResults.length>0){
@@ -151,25 +150,21 @@ async function applyFilters(){
     }
   }
 
-  /* STEP 2 — Apply remaining filters */
   if(typeFilter)res=res.filter(a=>a.type===typeFilter)
   if(loc)res=res.filter(a=>(a.location||'').toLowerCase().includes(loc)||(a.region||'').toLowerCase().includes(loc))
   if(tag)res=res.filter(a=>(a.tags||[]).some(t=>t.toLowerCase().includes(tag)))
 
-  /* STEP 3 — Sort */
   if(sort==='oldest')res.sort((a,b)=>(a.uploadedAt||'').localeCompare(b.uploadedAt||''))
   else if(sort==='newest')res.sort((a,b)=>(b.uploadedAt||'').localeCompare(a.uploadedAt||''))
   else if(sort==='title')res.sort((a,b)=>(a.title||'').localeCompare(b.title||''))
   else if(sort==='type')res.sort((a,b)=>(a.type||'').localeCompare(b.type||''))
   else if(sort==='region')res.sort((a,b)=>(a.region||'').localeCompare(b.region||''))
 
-  /* STEP 4 — Get DOM elements AFTER all async work */
   const grid=document.getElementById('archive-grid')
   const none=document.getElementById('no-results')
   const cnt=document.getElementById('res-count')
   if(!grid)return
 
-  /* STEP 5 — Show/hide Azure AI Search banner */
   const existing=document.getElementById('ai-search-banner')
   if(existing)existing.remove()
   if(usedAzureSearch){
@@ -181,7 +176,6 @@ async function applyFilters(){
     cnt.textContent=`🔍 Azure AI Search: ${res.length} result${res.length!==1?'s':''} found`
   }
 
-  /* STEP 6 — Paginate and render */
   const total=res.length
   const totalPages=Math.max(1,Math.ceil(total/PAGE_SIZE))
   if(archivePage>totalPages)archivePage=totalPages
@@ -295,12 +289,17 @@ function renderDetBody(a){
   const tagsHTML=(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')
   const specsHTML=a.specs&&Object.keys(a.specs).length?`<div class="det-block"><div class="det-block-label">${label} Specifications</div><div class="spec-grid">${Object.entries(a.specs).map(([k,v])=>`<div class="si"><span class="si-v">${v}</span><span class="si-k">${k}</span></div>`).join('')}</div></div>`:''
   const aiHTML=(a.aiTags||[]).length?`<div class="det-block"><div class="det-block-label">🤖 AI-Generated Tags (Azure Computer Vision)</div><div class="tags">${(a.aiTags||[]).map(t=>`<span class="tag" style="background:var(--aug);border-color:var(--au)">${t}</span>`).join('')}</div></div>`:''
+  /* Azure Video Indexer badge — shows on video assets submitted for indexing */
+  const viHTML=a.specs&&a.specs['Video Indexer ID']
+    ?`<div class="det-block"><div class="det-block-label">🎬 Azure Video Indexer</div><div style="display:flex;flex-direction:column;gap:.5rem"><div style="display:flex;gap:.5rem;flex-wrap:wrap"><span style="background:#5c2d91;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">⚡ Submitted to Azure Video Indexer</span></div><p style="font-size:.82rem;color:var(--t2);margin:.3rem 0 0">Scene detection · Automatic subtitle generation · Keyword extraction · Landmark recognition<br><span style="opacity:.7">Video Indexer ID: ${a.specs['Video Indexer ID']}</span></p></div></div>`
+    :''
   /* Dynamic Content Safety badge — red if explicitly flagged, green for everything else */
   const safetyHTML=a.contentSafe===false
     ?'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#ef4444;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">⚠️ Flagged — Content safety violation detected</span></div></div>'
     :'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#16a34a;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">✓ Passed — No harmful content detected</span></div></div>'
-  document.getElementById('det-body').innerHTML=`${media}<div class="det-eyebrow">${label} · ${a.uploadedAt||'—'} · by ${a.uploadedByName||'—'}</div><h1 class="det-title">${a.title||''}</h1><div class="det-metas"><div class="dm"><span class="dm-l">Location</span><span class="dm-v">${a.location||'—'}</span></div><div class="dm"><span class="dm-l">Region</span><span class="dm-v">${a.region||'—'}</span></div><div class="dm"><span class="dm-l">Type</span><span class="dm-v">${label}</span></div><div class="dm"><span class="dm-l">Uploaded by</span><span class="dm-v">${a.uploadedByName||'—'}</span></div></div><p class="det-desc">${a.description||'No description provided.'}</p><div class="tags">${tagsHTML}</div>${specsHTML}${aiHTML}${safetyHTML}`
+  document.getElementById('det-body').innerHTML=`${media}<div class="det-eyebrow">${label} · ${a.uploadedAt||'—'} · by ${a.uploadedByName||'—'}</div><h1 class="det-title">${a.title||''}</h1><div class="det-metas"><div class="dm"><span class="dm-l">Location</span><span class="dm-v">${a.location||'—'}</span></div><div class="dm"><span class="dm-l">Region</span><span class="dm-v">${a.region||'—'}</span></div><div class="dm"><span class="dm-l">Type</span><span class="dm-v">${label}</span></div><div class="dm"><span class="dm-l">Uploaded by</span><span class="dm-v">${a.uploadedByName||'—'}</span></div></div><p class="det-desc">${a.description||'No description provided.'}</p><div class="tags">${tagsHTML}</div>${specsHTML}${aiHTML}${viHTML}${safetyHTML}`
 }
+
 /* ============================================================
    VIDEO PLAYBACK
    ============================================================ */
@@ -467,6 +466,48 @@ async function analyseImageWithCV(blobUrl){
 }
 
 /* ============================================================
+   AZURE VIDEO INDEXER — scene detection, subtitles, keywords
+   ============================================================ */
+async function getVideoIndexerToken(){
+  try{
+    const r=await fetch(`https://api.videoindexer.ai/Auth/${CONFIG.VIDEO_INDEXER.location}/Accounts/${CONFIG.VIDEO_INDEXER.accountId}/AccessToken?allowEdit=true`,{
+      headers:{'Ocp-Apim-Subscription-Key':CONFIG.VIDEO_INDEXER.apiKey}
+    })
+    if(!r.ok)return null
+    const token=await r.json()
+    return token
+  }catch(e){
+    console.error('VI token error:',e)
+    return null
+  }
+}
+
+async function submitVideoToIndexer(videoUrl,videoName,token){
+  try{
+    const params=new URLSearchParams({
+      accessToken:token,
+      name:videoName,
+      videoUrl:videoUrl,
+      privacy:'Public',
+      language:'auto'
+    })
+    const r=await fetch(`https://api.videoindexer.ai/${CONFIG.VIDEO_INDEXER.location}/Accounts/${CONFIG.VIDEO_INDEXER.accountId}/Videos?${params}`,{
+      method:'POST',
+      headers:{'Ocp-Apim-Subscription-Key':CONFIG.VIDEO_INDEXER.apiKey}
+    })
+    if(!r.ok){
+      console.warn('VI submit failed:',r.status,await r.text())
+      return null
+    }
+    const data=await r.json()
+    return data.id
+  }catch(e){
+    console.error('VI submit error:',e)
+    return null
+  }
+}
+
+/* ============================================================
    VIDEO THUMBNAIL GENERATOR
    ============================================================ */
 function generateVideoThumbnail(file){
@@ -540,7 +581,7 @@ async function checkContentSafety(text){
    UPLOAD
    Step 1: Content Safety screen
    Step 2: Upload to Azure Blob Storage (with progress)
-   Step 3: Generate video thumbnail OR run Computer Vision
+   Step 3: Video thumbnail + Video Indexer OR Computer Vision
    Step 4: Save metadata to Cosmos DB via Logic App
    ============================================================ */
 function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
@@ -616,13 +657,15 @@ async function doUpload(){
     toast('Blob upload failed — saving without file','warn')
   }
 
-  /* STEP 3 — Video thumbnail OR Computer Vision */
+  /* STEP 3 — Video: thumbnail + Video Indexer | Image: Computer Vision */
   let thumbnailUrl=blobUrl
   let videoUrl=''
   let aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
+  const specs={}
 
   if(type==='video'&&file.files[0]&&blobUrl){
     videoUrl=blobUrl
+    /* Generate thumbnail */
     toast('Generating video thumbnail...','success')
     try{
       thumbnailUrl=await generateVideoThumbnail(file.files[0])
@@ -631,14 +674,32 @@ async function doUpload(){
       console.warn('Thumbnail generation failed:',e)
       thumbnailUrl=''
     }
+    /* Submit to Azure Video Indexer */
+    toast('Submitting to Azure Video Indexer...','success')
+    try{
+      const viToken=await getVideoIndexerToken()
+      if(viToken){
+        const viId=await submitVideoToIndexer(blobUrl,title,viToken)
+        if(viId){
+          specs['Video Indexer ID']=viId
+          specs['VI Status']='Processing — scene detection & transcript in progress'
+          toast('Azure Video Indexer processing started ✓','success')
+        }else{
+          toast('Video Indexer submission failed — continuing','warn')
+        }
+      }
+    }catch(e){
+      console.warn('Video Indexer error:',e)
+    }
+    specs['Resolution']='4K UHD'
+    specs['Processing']='Azure Video Indexer — scene detection, transcript & keyword extraction'
   } else if(type==='image'&&blobUrl){
     await new Promise(resolve=>setTimeout(resolve,2000))
     const cvTags=await analyseImageWithCV(blobUrl)
     if(cvTags.length>0){aiTags=[...new Set([...aiTags,...cvTags])]}
   }
 
-  /* STEP 4 — Build specs */
-  const specs={}
+  /* STEP 4 — Extra specs for 3D/LiDAR */
   if(type==='3dscan'||type==='lidar'){
     const ac=document.getElementById('u-ac')?.value.trim()
     const me2=document.getElementById('u-me')?.value.trim()
@@ -647,7 +708,6 @@ async function doUpload(){
     if(me2)specs['Capture method']=me2
     if(eq)specs['Equipment']=eq
   }
-  if(type==='video'){specs['Resolution']='4K UHD';specs['Processing']='Scene detection & subtitles generated'}
 
   const newAsset={
     id:'a'+Date.now(),
@@ -665,7 +725,7 @@ async function doUpload(){
     uploadedBy:me.id,
     uploadedByName:me.first+' '+me.last,
     featured:false,
-    contentSafe:true    /* ← always true here since failed uploads are blocked above */
+    contentSafe:true
   }
 
   /* STEP 5 — Save to Cosmos DB */

@@ -25,5 +25,11 @@ const CONFIG={
   CONTENT_SAFETY:{
     endpoint:'https://cs-heritaguard.cognitiveservices.azure.com/',
     key:'BaBc193qsYqWWAQhDYQRySzcZqxrg5vL'+'HjRD8e5nzRdPDBeGniFPJQQJ99CEACgEuAYXJ3w3AAAHACOGXidi'
+  },
+  VIDEO_INDEXER:{
+    accountId:'41b76e30-22ad-472e-bd06-d50c67e02edd',
+    apiKey:'72265ed1dbaa4203bd8826e65b0e7514',
+    location:'trial'
   }
 }
+
