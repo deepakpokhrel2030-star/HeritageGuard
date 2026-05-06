@@ -531,7 +531,7 @@ function generateVideoThumbnail(file){
 }
 
 /* ============================================================
-   AZURE CONTENT SAFETY — screen uploads for harmful content
+   AZURE CONTENT SAFETY
    ============================================================ */
 async function checkContentSafety(text){
   try{
@@ -642,7 +642,7 @@ async function doUpload(){
   }
 
   /* STEP 3 — Video Indexer / CV / Thumbnail */
-  let thumbnailUrl=blobUrl,videoUrl='',aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
+  let thumbnailUrl=blobUrl,videoUrl='',aiTags=[]
   const specs={}
 
   if(type==='video'&&file.files[0]&&blobUrl){
@@ -667,7 +667,7 @@ async function doUpload(){
   } else if(type==='image'&&blobUrl){
     await new Promise(resolve=>setTimeout(resolve,2000))
     const cvTags=await analyseImageWithCV(blobUrl)
-    if(cvTags.length>0){aiTags=[...new Set([...aiTags,...cvTags])]}
+    if(cvTags.length>0){aiTags=[...new Set([...cvTags])]}
   }
 
   if(type==='3dscan'||type==='lidar'){
@@ -710,7 +710,7 @@ function resetUpload(){
 }
 
 /* ============================================================
-   EDIT — with full pipeline on new file
+   EDIT — with media replace + full pipeline + partition key fix
    ============================================================ */
 function onEditFilePick(input){
   const zone=document.getElementById('e-fzone')
@@ -740,9 +740,13 @@ function openEditPg(){
   document.getElementById('e-ti').value=a.title||''
   document.getElementById('e-de').value=a.description||''
   document.getElementById('e-lo').value=a.location||''
-  document.getElementById('e-re').value=a.region||''
+  /* Show region as read-only — cannot change partition key in Cosmos DB */
+  const reEl=document.getElementById('e-re')
+  reEl.value=a.region||''
+  reEl.disabled=true
   document.getElementById('e-ty').value=a.type||'image'
   document.getElementById('e-ta').value=(a.tags||[]).join(', ')
+  /* Show current media preview */
   const cur=document.getElementById('e-current-media')
   if(cur){
     if(a.thumbnail&&a.thumbnail.startsWith('https://')){
@@ -766,17 +770,19 @@ async function doUpdate(){
   const title=document.getElementById('e-ti').value.trim()
   const desc=document.getElementById('e-de').value.trim()
   const loc=document.getElementById('e-lo').value.trim()
-  const region=document.getElementById('e-re').value
   const type=document.getElementById('e-ty').value
   const tags=document.getElementById('e-ta').value.trim()
   const file=document.getElementById('e-fi')
   if(!title||!loc){toast('Title and location are required.','error');return}
   showLoad()
 
-  /* Defaults — keep existing values unless new file uploaded */
+  /* ── CRITICAL FIX: always use original region as partition key ── */
+  const originalRegion=curAsset.region
+
+  /* Keep existing values as defaults */
   let thumbnailUrl=curAsset.thumbnail
   let videoUrl=curAsset.videoUrl||''
-  let aiTags=curAsset.aiTags||[]     /* keep old tags by default */
+  let aiTags=curAsset.aiTags||[]
   let specs={...curAsset.specs||{}}
   let contentSafe=curAsset.contentSafe!==false
 
@@ -791,9 +797,8 @@ async function doUpdate(){
   toast('Content Safety check passed ✓','success')
   contentSafe=true
 
-  /* If new file selected — run full pipeline and RESET AI tags */
+  /* If new file selected — run full pipeline and reset AI tags */
   if(file&&file.files[0]){
-    /* Upload new file to Blob Storage */
     let newBlobUrl=''
     try{
       const f=file.files[0]
@@ -827,7 +832,6 @@ async function doUpdate(){
 
     if(newBlobUrl){
       if(type==='video'){
-        /* Video: thumbnail + Video Indexer */
         videoUrl=newBlobUrl
         toast('Generating video thumbnail...','success')
         try{
@@ -848,29 +852,31 @@ async function doUpdate(){
             }
           }
         }catch(e){console.warn('Video Indexer error:',e)}
-        /* Reset AI tags for video */
-        aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
+        aiTags=[] /* reset for video */
       } else if(type==='image'){
-        /* Image: reset AI tags completely, run Computer Vision fresh */
         thumbnailUrl=newBlobUrl
-        aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()] /* ← RESET old tags */
+        aiTags=[] /* ← reset old tags completely */
         await new Promise(resolve=>setTimeout(resolve,2000))
         const cvTags=await analyseImageWithCV(newBlobUrl)
         if(cvTags.length>0){
-          aiTags=[...new Set([...aiTags,...cvTags])] /* ← fresh CV tags only */
+          aiTags=[...new Set([...cvTags])] /* ← only fresh CV tags */
           toast('AI tags regenerated via Computer Vision ✓','success')
         }
       } else {
-        /* Other types: just update thumbnail */
         thumbnailUrl=newBlobUrl
-        aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
+        aiTags=[]
       }
     }
   }
 
+  /* Build updated asset — ALWAYS use originalRegion to prevent duplicate */
   const updated={
     ...curAsset,
-    title,description:desc,location:loc,region,type,
+    title,
+    description:desc,
+    location:loc,
+    region:originalRegion, /* ← partition key locked to original — prevents duplicates */
+    type,
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
     aiTags,
     specs,
@@ -888,12 +894,17 @@ async function doUpdate(){
       const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
       if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
     }
-    hideLoad();toast('Asset updated and saved to Cosmos DB ✓','success');renderDetBody(curAsset);goPage('detail')
+    hideLoad()
+    toast('Asset updated and saved to Cosmos DB ✓','success')
+    renderDetBody(curAsset)
+    goPage('detail')
   }catch(e){
     hideLoad();console.error('Update failed:',e)
     const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
     if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
-    toast('Updated locally (API error: '+e.message+')','warn');renderDetBody(curAsset);goPage('detail')
+    toast('Updated locally (API error: '+e.message+')','warn')
+    renderDetBody(curAsset)
+    goPage('detail')
   }
 }
 
