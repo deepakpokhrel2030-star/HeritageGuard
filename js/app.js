@@ -289,11 +289,9 @@ function renderDetBody(a){
   const tagsHTML=(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')
   const specsHTML=a.specs&&Object.keys(a.specs).length?`<div class="det-block"><div class="det-block-label">${label} Specifications</div><div class="spec-grid">${Object.entries(a.specs).map(([k,v])=>`<div class="si"><span class="si-v">${v}</span><span class="si-k">${k}</span></div>`).join('')}</div></div>`:''
   const aiHTML=(a.aiTags||[]).length?`<div class="det-block"><div class="det-block-label">🤖 AI-Generated Tags (Azure Computer Vision)</div><div class="tags">${(a.aiTags||[]).map(t=>`<span class="tag" style="background:var(--aug);border-color:var(--au)">${t}</span>`).join('')}</div></div>`:''
-  /* Azure Video Indexer badge — shows on video assets submitted for indexing */
   const viHTML=a.specs&&a.specs['Video Indexer ID']
     ?`<div class="det-block"><div class="det-block-label">🎬 Azure Video Indexer</div><div style="display:flex;flex-direction:column;gap:.5rem"><div style="display:flex;gap:.5rem;flex-wrap:wrap"><span style="background:#5c2d91;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">⚡ Submitted to Azure Video Indexer</span></div><p style="font-size:.82rem;color:var(--t2);margin:.3rem 0 0">Scene detection · Automatic subtitle generation · Keyword extraction · Landmark recognition<br><span style="opacity:.7">Video Indexer ID: ${a.specs['Video Indexer ID']}</span></p></div></div>`
     :''
-  /* Dynamic Content Safety badge — red if explicitly flagged, green for everything else */
   const safetyHTML=a.contentSafe===false
     ?'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#ef4444;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">⚠️ Flagged — Content safety violation detected</span></div></div>'
     :'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#16a34a;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">✓ Passed — No harmful content detected</span></div></div>'
@@ -474,8 +472,7 @@ async function getVideoIndexerToken(){
       headers:{'Ocp-Apim-Subscription-Key':CONFIG.VIDEO_INDEXER.apiKey}
     })
     if(!r.ok)return null
-    const token=await r.json()
-    return token
+    return await r.json()
   }catch(e){
     console.error('VI token error:',e)
     return null
@@ -484,21 +481,12 @@ async function getVideoIndexerToken(){
 
 async function submitVideoToIndexer(videoUrl,videoName,token){
   try{
-    const params=new URLSearchParams({
-      accessToken:token,
-      name:videoName,
-      videoUrl:videoUrl,
-      privacy:'Public',
-      language:'auto'
-    })
+    const params=new URLSearchParams({accessToken:token,name:videoName,videoUrl,privacy:'Public',language:'auto'})
     const r=await fetch(`https://api.videoindexer.ai/${CONFIG.VIDEO_INDEXER.location}/Accounts/${CONFIG.VIDEO_INDEXER.accountId}/Videos?${params}`,{
       method:'POST',
       headers:{'Ocp-Apim-Subscription-Key':CONFIG.VIDEO_INDEXER.apiKey}
     })
-    if(!r.ok){
-      console.warn('VI submit failed:',r.status,await r.text())
-      return null
-    }
+    if(!r.ok){console.warn('VI submit failed:',r.status);return null}
     const data=await r.json()
     return data.id
   }catch(e){
@@ -559,10 +547,7 @@ async function checkContentSafety(text){
         outputType:'FourSeverityLevels'
       })
     })
-    if(!r.ok){
-      console.warn('Content Safety check failed:',r.status)
-      return{safe:true}
-    }
+    if(!r.ok){console.warn('Content Safety check failed:',r.status);return{safe:true}}
     const data=await r.json()
     const categories=data.categoriesAnalysis||[]
     const flagged=categories.filter(c=>c.severity>=2)
@@ -578,13 +563,10 @@ async function checkContentSafety(text){
 }
 
 /* ============================================================
-   UPLOAD
-   Step 1: Content Safety screen
-   Step 2: Upload to Azure Blob Storage (with progress)
-   Step 3: Video thumbnail + Video Indexer OR Computer Vision
-   Step 4: Save metadata to Cosmos DB via Logic App
+   UPLOAD HELPERS
    ============================================================ */
 function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
+
 function onFilePick(input){
   const drop=document.getElementById('fzone'),ui=document.getElementById('fzone-ui')
   if(input.files&&input.files[0]){
@@ -600,6 +582,9 @@ function onFilePick(input){
   }
 }
 
+/* ============================================================
+   UPLOAD — main pipeline
+   ============================================================ */
 async function doUpload(){
   if(!me){toast('Please sign in first.','error');return}
   const title=document.getElementById('u-ti').value.trim()
@@ -613,10 +598,9 @@ async function doUpload(){
   if(!file.files[0]){toast('Please select a file.','error');return}
   showLoad()
 
-  /* STEP 1 — Azure Content Safety screening */
+  /* STEP 1 — Content Safety */
   toast('Screening content with Azure Content Safety...','success')
-  const safetyText=`${title} ${desc} ${tags}`
-  const safetyResult=await checkContentSafety(safetyText)
+  const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
   if(!safetyResult.safe){
     hideLoad()
     toast('Upload blocked by Azure Content Safety: '+safetyResult.reasons,'error')
@@ -624,7 +608,7 @@ async function doUpload(){
   }
   toast('Content Safety check passed ✓','success')
 
-  /* STEP 2 — Upload to Azure Blob Storage with progress */
+  /* STEP 2 — Blob Storage upload */
   let blobUrl=''
   try{
     const f=file.files[0]
@@ -647,7 +631,7 @@ async function doUpload(){
         if(xhr.status===201||xhr.status===200){resolve(CONFIG.BLOB.baseUrl+'/'+blobName)}
         else{reject(new Error('Upload failed: '+xhr.status))}
       })
-      xhr.addEventListener('error',()=>reject(new Error('Network error during upload')))
+      xhr.addEventListener('error',()=>reject(new Error('Network error')))
       xhr.addEventListener('abort',()=>reject(new Error('Upload cancelled')))
       xhr.send(f)
     })
@@ -657,24 +641,15 @@ async function doUpload(){
     toast('Blob upload failed — saving without file','warn')
   }
 
-  /* STEP 3 — Video: thumbnail + Video Indexer | Image: Computer Vision */
-  let thumbnailUrl=blobUrl
-  let videoUrl=''
-  let aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
+  /* STEP 3 — Video Indexer / CV / Thumbnail */
+  let thumbnailUrl=blobUrl,videoUrl='',aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
   const specs={}
 
   if(type==='video'&&file.files[0]&&blobUrl){
     videoUrl=blobUrl
-    /* Generate thumbnail */
     toast('Generating video thumbnail...','success')
-    try{
-      thumbnailUrl=await generateVideoThumbnail(file.files[0])
-      toast('Video thumbnail generated ✓','success')
-    }catch(e){
-      console.warn('Thumbnail generation failed:',e)
-      thumbnailUrl=''
-    }
-    /* Submit to Azure Video Indexer */
+    try{thumbnailUrl=await generateVideoThumbnail(file.files[0]);toast('Video thumbnail generated ✓','success')}
+    catch(e){console.warn('Thumbnail failed:',e);thumbnailUrl=''}
     toast('Submitting to Azure Video Indexer...','success')
     try{
       const viToken=await getVideoIndexerToken()
@@ -684,13 +659,9 @@ async function doUpload(){
           specs['Video Indexer ID']=viId
           specs['VI Status']='Processing — scene detection & transcript in progress'
           toast('Azure Video Indexer processing started ✓','success')
-        }else{
-          toast('Video Indexer submission failed — continuing','warn')
         }
       }
-    }catch(e){
-      console.warn('Video Indexer error:',e)
-    }
+    }catch(e){console.warn('Video Indexer error:',e)}
     specs['Resolution']='4K UHD'
     specs['Processing']='Azure Video Indexer — scene detection, transcript & keyword extraction'
   } else if(type==='image'&&blobUrl){
@@ -699,7 +670,6 @@ async function doUpload(){
     if(cvTags.length>0){aiTags=[...new Set([...aiTags,...cvTags])]}
   }
 
-  /* STEP 4 — Extra specs for 3D/LiDAR */
   if(type==='3dscan'||type==='lidar'){
     const ac=document.getElementById('u-ac')?.value.trim()
     const me2=document.getElementById('u-me')?.value.trim()
@@ -710,39 +680,22 @@ async function doUpload(){
   }
 
   const newAsset={
-    id:'a'+Date.now(),
-    title,
-    description:desc,
-    location:loc,
-    region,
-    type,
+    id:'a'+Date.now(),title,description:desc,location:loc,region,type,
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
-    aiTags,
-    specs,
-    thumbnail:thumbnailUrl,
-    videoUrl,
+    aiTags,specs,thumbnail:thumbnailUrl,videoUrl,
     uploadedAt:new Date().toISOString().split('T')[0],
-    uploadedBy:me.id,
-    uploadedByName:me.first+' '+me.last,
-    featured:false,
-    contentSafe:true
+    uploadedBy:me.id,uploadedByName:me.first+' '+me.last,
+    featured:false,contentSafe:true
   }
 
-  /* STEP 5 — Save to Cosmos DB */
   try{
     if(USE_LIVE){await createAsset(newAsset);ASSETS=await getAllAssets()}
     else{ASSETS.unshift(newAsset)}
-    hideLoad()
-    toast('Asset uploaded to Azure successfully! ✓','success')
-    resetUpload()
-    goPage('archive')
+    hideLoad();toast('Asset uploaded to Azure successfully! ✓','success');resetUpload();goPage('archive')
   }catch(e){
-    hideLoad()
-    console.error('Metadata save failed:',e)
+    hideLoad();console.error('Metadata save failed:',e)
     ASSETS.unshift(newAsset)
-    toast('Saved locally (API error: '+e.message+')','warn')
-    resetUpload()
-    goPage('archive')
+    toast('Saved locally (API error: '+e.message+')','warn');resetUpload();goPage('archive')
   }
 }
 
@@ -757,9 +710,58 @@ function resetUpload(){
 }
 
 /* ============================================================
-   EDIT
+   EDIT — with media replace support
    ============================================================ */
-function openEditPg(){if(!curAsset)return;const a=curAsset;document.getElementById('e-ti').value=a.title||'';document.getElementById('e-de').value=a.description||'';document.getElementById('e-lo').value=a.location||'';document.getElementById('e-re').value=a.region||'';document.getElementById('e-ty').value=a.type||'image';document.getElementById('e-ta').value=(a.tags||[]).join(', ');goPage('edit')}
+function onEditFilePick(input){
+  const zone=document.getElementById('e-fzone')
+  const ui=document.getElementById('e-fzone-ui')
+  if(input.files&&input.files[0]){
+    const f=input.files[0]
+    zone.classList.add('ok')
+    if(f.type.startsWith('image/')){
+      const reader=new FileReader()
+      reader.onload=e=>{ui.innerHTML=`<img src="${e.target.result}" style="max-height:120px;border-radius:8px;object-fit:cover;width:100%;margin-bottom:.5rem"/><p class="fzone-main" style="color:var(--gr)">✓ ${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · New file selected</p>`}
+      reader.readAsDataURL(f)
+    }else{
+      ui.innerHTML=`<div class="fzone-icon" style="color:var(--gr)">✓</div><p class="fzone-main">${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · New file selected</p>`
+    }
+  }
+}
+
+function clearEditFile(){
+  document.getElementById('e-fi').value=''
+  const zone=document.getElementById('e-fzone')
+  if(zone)zone.classList.remove('ok')
+  const ui=document.getElementById('e-fzone-ui')
+  if(ui)ui.innerHTML='<div class="fzone-icon">↑</div><p class="fzone-main">Click to replace media file</p><p class="fzone-sub">Images · 4K Video · 3D Scans (.obj/.glb) · LiDAR (.las/.laz) · PDF</p>'
+}
+
+function openEditPg(){
+  if(!curAsset)return
+  const a=curAsset
+  document.getElementById('e-ti').value=a.title||''
+  document.getElementById('e-de').value=a.description||''
+  document.getElementById('e-lo').value=a.location||''
+  document.getElementById('e-re').value=a.region||''
+  document.getElementById('e-ty').value=a.type||'image'
+  document.getElementById('e-ta').value=(a.tags||[]).join(', ')
+  /* Show current media preview */
+  const cur=document.getElementById('e-current-media')
+  if(cur){
+    if(a.thumbnail&&a.thumbnail.startsWith('https://')){
+      if(a.type==='image'){
+        cur.innerHTML=`<p style="margin:0 0 .4rem;font-weight:600;font-size:.82rem">Current image:</p><img src="${a.thumbnail}" style="max-height:100px;border-radius:6px;object-fit:cover;max-width:200px"/>`
+      } else {
+        cur.innerHTML=`<p style="margin:0 0 .3rem;font-weight:600;font-size:.82rem">Current file:</p><a href="${a.thumbnail}" target="_blank" style="color:var(--au);font-size:.82rem">View current file ↗</a>`
+      }
+    } else {
+      cur.innerHTML=`<p style="margin:0;color:var(--t3);font-size:.82rem">No media file currently attached</p>`
+    }
+  }
+  clearEditFile()
+  goPage('edit')
+}
+
 function editFromCard(id){const a=ASSETS.find(x=>x.id===id);if(!a)return;curAsset=a;openEditPg()}
 
 async function doUpdate(){
@@ -770,16 +772,65 @@ async function doUpdate(){
   const region=document.getElementById('e-re').value
   const type=document.getElementById('e-ty').value
   const tags=document.getElementById('e-ta').value.trim()
+  const file=document.getElementById('e-fi')
   if(!title||!loc){toast('Title and location are required.','error');return}
   showLoad()
-  const updated={...curAsset,title,description:desc,location:loc,region,type,tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[]}
+
+  /* Upload new file if selected */
+  let thumbnailUrl=curAsset.thumbnail
+  let videoUrl=curAsset.videoUrl||''
+
+  if(file&&file.files[0]){
+    toast('Uploading new file to Azure Blob Storage...','success')
+    try{
+      const f=file.files[0]
+      const blobName=Date.now()+'-'+f.name.replace(/\s+/g,'-')
+      const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
+      await new Promise((resolve,reject)=>{
+        const xhr=new XMLHttpRequest()
+        xhr.open('PUT',uploadUrl)
+        xhr.setRequestHeader('x-ms-blob-type','BlockBlob')
+        xhr.setRequestHeader('Content-Type',f.type||'application/octet-stream')
+        xhr.addEventListener('load',()=>{
+          if(xhr.status===201||xhr.status===200){resolve()}
+          else{reject(new Error('Upload failed: '+xhr.status))}
+        })
+        xhr.addEventListener('error',()=>reject(new Error('Network error')))
+        xhr.send(f)
+      })
+      const newBlobUrl=CONFIG.BLOB.baseUrl+'/'+blobName
+      if(type==='video'){
+        videoUrl=newBlobUrl
+        try{thumbnailUrl=await generateVideoThumbnail(f)}
+        catch(e){thumbnailUrl=newBlobUrl}
+      } else {
+        thumbnailUrl=newBlobUrl
+      }
+      toast('File replaced in Azure Blob Storage ✓','success')
+    }catch(e){
+      console.error('File upload error:',e)
+      toast('File upload failed — keeping existing file','warn')
+    }
+  }
+
+  const updated={...curAsset,title,description:desc,location:loc,region,type,
+    tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
+    thumbnail:thumbnailUrl,videoUrl}
+
   try{
-    if(USE_LIVE){await updateAsset(updated.id,updated);ASSETS=await getAllAssets();curAsset=ASSETS.find(a=>a.id===updated.id)||updated}
-    else{const idx=ASSETS.findIndex(a=>a.id===curAsset.id);if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}}
+    if(USE_LIVE){
+      await updateAsset(updated.id,updated)
+      ASSETS=await getAllAssets()
+      curAsset=ASSETS.find(a=>a.id===updated.id)||updated
+    }else{
+      const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
+      if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
+    }
     hideLoad();toast('Asset updated and saved to Cosmos DB ✓','success');renderDetBody(curAsset);goPage('detail')
   }catch(e){
     hideLoad();console.error('Update failed:',e)
-    const idx=ASSETS.findIndex(a=>a.id===curAsset.id);if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
+    const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
+    if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
     toast('Updated locally (API error: '+e.message+')','warn');renderDetBody(curAsset);goPage('detail')
   }
 }
