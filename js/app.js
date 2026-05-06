@@ -346,11 +346,9 @@ async function doLogin(){
     const u=users[0]
     const user={id:u.id,first:u.firstName,last:u.lastName,email:u.email,pw:u.password,role:u.role||'contributor',org:u.org||'',joined:u.joined||''}
     if(!USERS.find(x=>x.id===user.id))USERS.push(user)
-    hideLoad()
-    signIn(user)
+    hideLoad();signIn(user)
   }catch(e){
-    hideLoad()
-    console.error('Login error:',e)
+    hideLoad();console.error('Login error:',e)
     const hashedPw=await hashPassword(pw)
     const u=USERS.find(u=>u.email===email&&(u.pw===hashedPw||u.pw===pw))
     if(!u){toast('Incorrect email or password.','error');return}
@@ -374,19 +372,14 @@ async function doRegister(){
     const newUser={id:'u'+Date.now(),firstName:fn,lastName:ln,email:em,password:hashedPw,role:'contributor',org:org||'Public',joined:new Date().toISOString().split('T')[0]}
     await fetch(CONFIG.ENDPOINTS.registerUser,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(newUser)})
     USERS.push({id:newUser.id,first:fn,last:ln,email:em,pw:hashedPw,role:'contributor',org:org||'Public',joined:newUser.joined})
-    hideLoad()
-    toast('Account created! You can now sign in.','success')
-    authTab('in')
-    document.getElementById('in-em').value=em
-    document.getElementById('in-pw').value=''
+    hideLoad();toast('Account created! You can now sign in.','success')
+    authTab('in');document.getElementById('in-em').value=em;document.getElementById('in-pw').value=''
   }catch(e){
-    hideLoad()
-    console.error('Register error:',e)
+    hideLoad();console.error('Register error:',e)
     const hashedPw=await hashPassword(pw)
     USERS.push({id:'u'+Date.now(),first:fn,last:ln,email:em,pw:hashedPw,role:'contributor',org:org||'Public',joined:new Date().toISOString().split('T')[0]})
     toast('Account created! You can now sign in.','success')
-    authTab('in')
-    document.getElementById('in-em').value=em
+    authTab('in');document.getElementById('in-em').value=em
   }
 }
 
@@ -432,7 +425,7 @@ function doLogout(){
 }
 
 /* ============================================================
-   AZURE COMPUTER VISION — Auto-tag images on upload
+   AZURE COMPUTER VISION
    ============================================================ */
 async function analyseImageWithCV(blobUrl){
   try{
@@ -440,31 +433,21 @@ async function analyseImageWithCV(blobUrl){
     const apiUrl=CONFIG.CV.endpoint+'vision/v3.2/analyze?visualFeatures=Tags,Description,Categories&language=en'
     const r=await fetch(apiUrl,{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Ocp-Apim-Subscription-Key':CONFIG.CV.key
-      },
+      headers:{'Content-Type':'application/json','Ocp-Apim-Subscription-Key':CONFIG.CV.key},
       body:JSON.stringify({url:blobUrl})
     })
-    if(!r.ok){
-      console.warn('CV analysis failed:',r.status,await r.text())
-      return[]
-    }
+    if(!r.ok){console.warn('CV analysis failed:',r.status,await r.text());return[]}
     const data=await r.json()
-    const tags=(data.tags||[])
-      .filter(t=>t.confidence>0.6)
-      .map(t=>t.name)
-      .slice(0,10)
+    const tags=(data.tags||[]).filter(t=>t.confidence>0.6).map(t=>t.name).slice(0,10)
     toast('AI tags generated: '+tags.slice(0,3).join(', ')+' ✓','success')
     return tags
   }catch(e){
-    console.error('CV error:',e)
-    return[]
+    console.error('CV error:',e);return[]
   }
 }
 
 /* ============================================================
-   AZURE VIDEO INDEXER — scene detection, subtitles, keywords
+   AZURE VIDEO INDEXER
    ============================================================ */
 async function getVideoIndexerToken(){
   try{
@@ -473,10 +456,7 @@ async function getVideoIndexerToken(){
     })
     if(!r.ok)return null
     return await r.json()
-  }catch(e){
-    console.error('VI token error:',e)
-    return null
-  }
+  }catch(e){console.error('VI token error:',e);return null}
 }
 
 async function submitVideoToIndexer(videoUrl,videoName,token){
@@ -489,10 +469,7 @@ async function submitVideoToIndexer(videoUrl,videoName,token){
     if(!r.ok){console.warn('VI submit failed:',r.status);return null}
     const data=await r.json()
     return data.id
-  }catch(e){
-    console.error('VI submit error:',e)
-    return null
-  }
+  }catch(e){console.error('VI submit error:',e);return null}
 }
 
 /* ============================================================
@@ -503,14 +480,10 @@ function generateVideoThumbnail(file){
     const video=document.createElement('video')
     const canvas=document.createElement('canvas')
     const url=URL.createObjectURL(file)
-    video.src=url
-    video.muted=true
-    video.playsInline=true
-    video.crossOrigin='anonymous'
+    video.src=url;video.muted=true;video.playsInline=true;video.crossOrigin='anonymous'
     video.addEventListener('loadedmetadata',()=>{video.currentTime=Math.min(1,video.duration*0.1)})
     video.addEventListener('seeked',()=>{
-      canvas.width=video.videoWidth||1280
-      canvas.height=video.videoHeight||720
+      canvas.width=video.videoWidth||1280;canvas.height=video.videoHeight||720
       const ctx=canvas.getContext('2d')
       ctx.drawImage(video,0,0,canvas.width,canvas.height)
       URL.revokeObjectURL(url)
@@ -537,29 +510,44 @@ async function checkContentSafety(text){
   try{
     const r=await fetch(CONFIG.CONTENT_SAFETY.endpoint+'contentsafety/text:analyze?api-version=2023-10-01',{
       method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'Ocp-Apim-Subscription-Key':CONFIG.CONTENT_SAFETY.key
-      },
-      body:JSON.stringify({
-        text:text.substring(0,1000),
-        categories:['Hate','SelfHarm','Sexual','Violence'],
-        outputType:'FourSeverityLevels'
-      })
+      headers:{'Content-Type':'application/json','Ocp-Apim-Subscription-Key':CONFIG.CONTENT_SAFETY.key},
+      body:JSON.stringify({text:text.substring(0,1000),categories:['Hate','SelfHarm','Sexual','Violence'],outputType:'FourSeverityLevels'})
     })
     if(!r.ok){console.warn('Content Safety check failed:',r.status);return{safe:true}}
     const data=await r.json()
-    const categories=data.categoriesAnalysis||[]
-    const flagged=categories.filter(c=>c.severity>=2)
-    if(flagged.length>0){
-      const reasons=flagged.map(c=>c.category).join(', ')
-      return{safe:false,reasons}
-    }
+    const flagged=(data.categoriesAnalysis||[]).filter(c=>c.severity>=2)
+    if(flagged.length>0)return{safe:false,reasons:flagged.map(c=>c.category).join(', ')}
     return{safe:true}
-  }catch(e){
-    console.error('Content Safety error:',e)
-    return{safe:true}
-  }
+  }catch(e){console.error('Content Safety error:',e);return{safe:true}}
+}
+
+/* ============================================================
+   BLOB UPLOAD HELPER
+   ============================================================ */
+async function uploadToBlob(file){
+  const blobName=Date.now()+'-'+file.name.replace(/\s+/g,'-')
+  const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
+  const sizeMB=(file.size/1024/1024).toFixed(1)
+  toast(file.size>50*1024*1024?`Uploading ${sizeMB}MB — large file, please wait...`:'Uploading to Azure Blob Storage...','success')
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest()
+    xhr.open('PUT',uploadUrl)
+    xhr.setRequestHeader('x-ms-blob-type','BlockBlob')
+    xhr.setRequestHeader('Content-Type',file.type||'application/octet-stream')
+    xhr.upload.addEventListener('progress',e=>{
+      if(e.lengthComputable){
+        const pct=Math.round((e.loaded/e.total)*100)
+        toast(`Uploading: ${pct}% (${(e.loaded/1024/1024).toFixed(1)}MB / ${sizeMB}MB)`,'success')
+      }
+    })
+    xhr.addEventListener('load',()=>{
+      if(xhr.status===201||xhr.status===200){resolve(CONFIG.BLOB.baseUrl+'/'+blobName)}
+      else{reject(new Error('Upload failed: '+xhr.status))}
+    })
+    xhr.addEventListener('error',()=>reject(new Error('Network error')))
+    xhr.addEventListener('abort',()=>reject(new Error('Upload cancelled')))
+    xhr.send(file)
+  })
 }
 
 /* ============================================================
@@ -570,8 +558,7 @@ function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidd
 function onFilePick(input){
   const drop=document.getElementById('fzone'),ui=document.getElementById('fzone-ui')
   if(input.files&&input.files[0]){
-    const f=input.files[0]
-    drop.classList.add('ok')
+    const f=input.files[0];drop.classList.add('ok')
     if(f.type.startsWith('image/')){
       const reader=new FileReader()
       reader.onload=e=>{ui.innerHTML=`<img src="${e.target.result}" style="max-height:160px;border-radius:8px;object-fit:cover;width:100%;margin-bottom:.6rem"/><p class="fzone-main" style="color:var(--gr)">✓ ${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · Click to change</p>`}
@@ -601,47 +588,15 @@ async function doUpload(){
   /* STEP 1 — Content Safety */
   toast('Screening content with Azure Content Safety...','success')
   const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
-  if(!safetyResult.safe){
-    hideLoad()
-    toast('Upload blocked by Azure Content Safety: '+safetyResult.reasons,'error')
-    return
-  }
+  if(!safetyResult.safe){hideLoad();toast('Upload blocked by Azure Content Safety: '+safetyResult.reasons,'error');return}
   toast('Content Safety check passed ✓','success')
 
-  /* STEP 2 — Blob Storage upload */
+  /* STEP 2 — Blob Storage */
   let blobUrl=''
-  try{
-    const f=file.files[0]
-    const blobName=Date.now()+'-'+f.name.replace(/\s+/g,'-')
-    const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
-    const sizeMB=(f.size/1024/1024).toFixed(1)
-    toast(f.size>50*1024*1024?`Uploading ${sizeMB}MB — large file, please wait...`:'Uploading to Azure Blob Storage...','success')
-    blobUrl=await new Promise((resolve,reject)=>{
-      const xhr=new XMLHttpRequest()
-      xhr.open('PUT',uploadUrl)
-      xhr.setRequestHeader('x-ms-blob-type','BlockBlob')
-      xhr.setRequestHeader('Content-Type',f.type||'application/octet-stream')
-      xhr.upload.addEventListener('progress',e=>{
-        if(e.lengthComputable){
-          const pct=Math.round((e.loaded/e.total)*100)
-          toast(`Uploading: ${pct}% (${(e.loaded/1024/1024).toFixed(1)}MB / ${sizeMB}MB)`,'success')
-        }
-      })
-      xhr.addEventListener('load',()=>{
-        if(xhr.status===201||xhr.status===200){resolve(CONFIG.BLOB.baseUrl+'/'+blobName)}
-        else{reject(new Error('Upload failed: '+xhr.status))}
-      })
-      xhr.addEventListener('error',()=>reject(new Error('Network error')))
-      xhr.addEventListener('abort',()=>reject(new Error('Upload cancelled')))
-      xhr.send(f)
-    })
-    toast('File uploaded to Azure Blob Storage ✓','success')
-  }catch(e){
-    console.error('Blob upload error:',e)
-    toast('Blob upload failed — saving without file','warn')
-  }
+  try{blobUrl=await uploadToBlob(file.files[0]);toast('File uploaded to Azure Blob Storage ✓','success')}
+  catch(e){console.error('Blob upload error:',e);toast('Blob upload failed — saving without file','warn')}
 
-  /* STEP 3 — Video Indexer / CV / Thumbnail */
+  /* STEP 3 — AI pipeline */
   let thumbnailUrl=blobUrl,videoUrl='',aiTags=[]
   const specs={}
 
@@ -667,7 +622,7 @@ async function doUpload(){
   } else if(type==='image'&&blobUrl){
     await new Promise(resolve=>setTimeout(resolve,2000))
     const cvTags=await analyseImageWithCV(blobUrl)
-    if(cvTags.length>0){aiTags=[...new Set([...cvTags])]}
+    if(cvTags.length>0)aiTags=[...new Set(cvTags)]
   }
 
   if(type==='3dscan'||type==='lidar'){
@@ -710,14 +665,12 @@ function resetUpload(){
 }
 
 /* ============================================================
-   EDIT — with media replace + full pipeline + partition key fix
+   EDIT — file pick helpers
    ============================================================ */
 function onEditFilePick(input){
-  const zone=document.getElementById('e-fzone')
-  const ui=document.getElementById('e-fzone-ui')
+  const zone=document.getElementById('e-fzone'),ui=document.getElementById('e-fzone-ui')
   if(input.files&&input.files[0]){
-    const f=input.files[0]
-    zone.classList.add('ok')
+    const f=input.files[0];zone.classList.add('ok')
     if(f.type.startsWith('image/')){
       const reader=new FileReader()
       reader.onload=e=>{ui.innerHTML=`<img src="${e.target.result}" style="max-height:120px;border-radius:8px;object-fit:cover;width:100%;margin-bottom:.5rem"/><p class="fzone-main" style="color:var(--gr)">✓ ${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · New file selected</p>`}
@@ -740,10 +693,10 @@ function openEditPg(){
   document.getElementById('e-ti').value=a.title||''
   document.getElementById('e-de').value=a.description||''
   document.getElementById('e-lo').value=a.location||''
-  /* Show region as read-only — cannot change partition key in Cosmos DB */
+  /* Region is fully editable — duplicate handled in doUpdate */
   const reEl=document.getElementById('e-re')
   reEl.value=a.region||''
-  reEl.disabled=true
+  reEl.disabled=false
   document.getElementById('e-ty').value=a.type||'image'
   document.getElementById('e-ta').value=(a.tags||[]).join(', ')
   /* Show current media preview */
@@ -752,10 +705,10 @@ function openEditPg(){
     if(a.thumbnail&&a.thumbnail.startsWith('https://')){
       if(a.type==='image'){
         cur.innerHTML=`<p style="margin:0 0 .4rem;font-weight:600;font-size:.82rem">Current image:</p><img src="${a.thumbnail}" style="max-height:100px;border-radius:6px;object-fit:cover;max-width:200px"/>`
-      } else {
+      }else{
         cur.innerHTML=`<p style="margin:0 0 .3rem;font-weight:600;font-size:.82rem">Current file:</p><a href="${a.thumbnail}" target="_blank" style="color:var(--au);font-size:.82rem">View current file ↗</a>`
       }
-    } else {
+    }else{
       cur.innerHTML=`<p style="margin:0;color:var(--t3);font-size:.82rem">No media file currently attached</p>`
     }
   }
@@ -765,18 +718,22 @@ function openEditPg(){
 
 function editFromCard(id){const a=ASSETS.find(x=>x.id===id);if(!a)return;curAsset=a;openEditPg()}
 
+/* ============================================================
+   EDIT — full pipeline, region change safe, clean AI tags
+   ============================================================ */
 async function doUpdate(){
   if(!curAsset)return
   const title=document.getElementById('e-ti').value.trim()
   const desc=document.getElementById('e-de').value.trim()
   const loc=document.getElementById('e-lo').value.trim()
+  const region=document.getElementById('e-re').value
   const type=document.getElementById('e-ty').value
   const tags=document.getElementById('e-ta').value.trim()
   const file=document.getElementById('e-fi')
   if(!title||!loc){toast('Title and location are required.','error');return}
   showLoad()
 
-  /* ── CRITICAL FIX: always use original region as partition key ── */
+  /* Store original region for partition key logic */
   const originalRegion=curAsset.region
 
   /* Keep existing values as defaults */
@@ -786,58 +743,25 @@ async function doUpdate(){
   let specs={...curAsset.specs||{}}
   let contentSafe=curAsset.contentSafe!==false
 
-  /* Always run Content Safety on updated text */
+  /* Always run Content Safety */
   toast('Checking content with Azure Content Safety...','success')
   const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
-  if(!safetyResult.safe){
-    hideLoad()
-    toast('Update blocked by Azure Content Safety: '+safetyResult.reasons,'error')
-    return
-  }
+  if(!safetyResult.safe){hideLoad();toast('Update blocked by Azure Content Safety: '+safetyResult.reasons,'error');return}
   toast('Content Safety check passed ✓','success')
   contentSafe=true
 
   /* If new file selected — run full pipeline and reset AI tags */
   if(file&&file.files[0]){
     let newBlobUrl=''
-    try{
-      const f=file.files[0]
-      const blobName=Date.now()+'-'+f.name.replace(/\s+/g,'-')
-      const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
-      const sizeMB=(f.size/1024/1024).toFixed(1)
-      toast('Uploading new file to Azure Blob Storage...','success')
-      newBlobUrl=await new Promise((resolve,reject)=>{
-        const xhr=new XMLHttpRequest()
-        xhr.open('PUT',uploadUrl)
-        xhr.setRequestHeader('x-ms-blob-type','BlockBlob')
-        xhr.setRequestHeader('Content-Type',f.type||'application/octet-stream')
-        xhr.upload.addEventListener('progress',e=>{
-          if(e.lengthComputable){
-            const pct=Math.round((e.loaded/e.total)*100)
-            toast(`Uploading: ${pct}% (${(e.loaded/1024/1024).toFixed(1)}MB / ${sizeMB}MB)`,'success')
-          }
-        })
-        xhr.addEventListener('load',()=>{
-          if(xhr.status===201||xhr.status===200){resolve(CONFIG.BLOB.baseUrl+'/'+blobName)}
-          else{reject(new Error('Upload failed: '+xhr.status))}
-        })
-        xhr.addEventListener('error',()=>reject(new Error('Network error')))
-        xhr.send(f)
-      })
-      toast('File uploaded to Azure Blob Storage ✓','success')
-    }catch(e){
-      console.error('Blob upload error:',e)
-      toast('File upload failed — keeping existing file','warn')
-    }
+    try{newBlobUrl=await uploadToBlob(file.files[0]);toast('File uploaded to Azure Blob Storage ✓','success')}
+    catch(e){console.error('Blob upload error:',e);toast('File upload failed — keeping existing file','warn')}
 
     if(newBlobUrl){
       if(type==='video'){
         videoUrl=newBlobUrl
         toast('Generating video thumbnail...','success')
-        try{
-          thumbnailUrl=await generateVideoThumbnail(file.files[0])
-          toast('Video thumbnail generated ✓','success')
-        }catch(e){thumbnailUrl=newBlobUrl}
+        try{thumbnailUrl=await generateVideoThumbnail(file.files[0]);toast('Video thumbnail generated ✓','success')}
+        catch(e){thumbnailUrl=newBlobUrl}
         toast('Submitting to Azure Video Indexer...','success')
         try{
           const viToken=await getVideoIndexerToken()
@@ -855,11 +779,11 @@ async function doUpdate(){
         aiTags=[] /* reset for video */
       } else if(type==='image'){
         thumbnailUrl=newBlobUrl
-        aiTags=[] /* ← reset old tags completely */
+        aiTags=[] /* reset old tags completely before CV */
         await new Promise(resolve=>setTimeout(resolve,2000))
         const cvTags=await analyseImageWithCV(newBlobUrl)
         if(cvTags.length>0){
-          aiTags=[...new Set([...cvTags])] /* ← only fresh CV tags */
+          aiTags=[...new Set(cvTags)] /* only fresh CV tags — no old ones */
           toast('AI tags regenerated via Computer Vision ✓','success')
         }
       } else {
@@ -869,42 +793,39 @@ async function doUpdate(){
     }
   }
 
-  /* Build updated asset — ALWAYS use originalRegion to prevent duplicate */
   const updated={
     ...curAsset,
-    title,
-    description:desc,
-    location:loc,
-    region:originalRegion, /* ← partition key locked to original — prevents duplicates */
+    title,description:desc,location:loc,
+    region, /* region is editable — handled below */
     type,
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
-    aiTags,
-    specs,
-    thumbnail:thumbnailUrl,
-    videoUrl,
-    contentSafe
+    aiTags,specs,thumbnail:thumbnailUrl,videoUrl,contentSafe
   }
 
   try{
     if(USE_LIVE){
-      await updateAsset(updated.id,updated)
+      /* If region changed — delete old partition key doc, create new one */
+      if(region!==originalRegion){
+        toast('Region changed — updating Cosmos DB partition...','success')
+        await deleteAsset(curAsset.id,originalRegion)
+        await createAsset(updated)
+      } else {
+        await updateAsset(updated.id,updated)
+      }
       ASSETS=await getAllAssets()
       curAsset=ASSETS.find(a=>a.id===updated.id)||updated
     }else{
       const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
       if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
     }
-    hideLoad()
-    toast('Asset updated and saved to Cosmos DB ✓','success')
-    renderDetBody(curAsset)
-    goPage('detail')
+    hideLoad();toast('Asset updated and saved to Cosmos DB ✓','success')
+    renderDetBody(curAsset);goPage('detail')
   }catch(e){
     hideLoad();console.error('Update failed:',e)
     const idx=ASSETS.findIndex(a=>a.id===curAsset.id)
     if(idx!==-1){ASSETS[idx]=updated;curAsset=ASSETS[idx]}
     toast('Updated locally (API error: '+e.message+')','warn')
-    renderDetBody(curAsset)
-    goPage('detail')
+    renderDetBody(curAsset);goPage('detail')
   }
 }
 
@@ -1152,9 +1073,9 @@ function initDragDrop(){
    SCROLL PROGRESS
    ============================================================ */
 window.addEventListener('scroll',()=>{
-  const prog=document.getElementById('scroll-prog');if(!prog)return;
-  const scrolled=(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight))*100;
-  prog.style.width=Math.min(scrolled,100)+'%';
+  const prog=document.getElementById('scroll-prog');if(!prog)return
+  const scrolled=(window.scrollY/(document.documentElement.scrollHeight-window.innerHeight))*100
+  prog.style.width=Math.min(scrolled,100)+'%'
 },{passive:true})
 
 /* ============================================================
