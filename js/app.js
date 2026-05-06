@@ -405,6 +405,7 @@ function checkStrength(val){
 }
 function signIn(u,silent=false){
   me=u
+  document.body.classList.replace('is-guest','is-user')
   document.getElementById('nav-guest').classList.add('hidden')
   document.getElementById('nav-user').classList.remove('hidden')
   document.getElementById('chip-name').textContent=u.first+' '+u.last
@@ -416,6 +417,7 @@ function signIn(u,silent=false){
 }
 function doLogout(){
   me=null
+  document.body.classList.replace('is-user','is-guest')
   localStorage.removeItem('hg_session')
   document.getElementById('nav-guest').classList.remove('hidden')
   document.getElementById('nav-user').classList.add('hidden')

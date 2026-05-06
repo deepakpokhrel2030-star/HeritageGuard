@@ -9,6 +9,19 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,300;1,500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    /* Fix navbar gap */
+    #nav { position: sticky; top: 0; z-index: 100; }
+    .pg { padding-top: 0 !important; }
+    #pg-home .hero-section-bg { padding-top: 2rem; }
+    /* Hide/show auth-dependent elements */
+    .guest-only { display: none; }
+    .user-only  { display: none; }
+    body.is-guest .guest-only { display: revert; }
+    body.is-guest .user-only  { display: none !important; }
+    body.is-user  .guest-only { display: none !important; }
+    body.is-user  .user-only  { display: revert; }
+  </style>
   <!-- Azure Application Insights -->
   <script>
     (function() {
@@ -27,7 +40,7 @@
     })();
   </script>
 </head>
-<body>
+<body class="is-guest">
 
   <!-- NAVBAR -->
   <header id="nav">
@@ -122,10 +135,19 @@
           <p class="hero-body">
             A cloud-native platform for documenting endangered cultural heritage — 3D scans, LiDAR surveys, 4K video, and photography — secured in Microsoft Azure for future generations.
           </p>
-          <div class="hero-actions">
+
+          <!-- Guest actions -->
+          <div class="hero-actions guest-only">
+            <button class="btn-gold btn-shimmer" onclick="goPage('archive')">Browse Archive</button>
+            <button class="btn-outline" onclick="goPage('login')">Sign in to Upload</button>
+          </div>
+
+          <!-- Logged in actions -->
+          <div class="hero-actions user-only">
             <button class="btn-gold btn-shimmer" onclick="goPage('archive')">Browse Archive</button>
             <button class="btn-outline" onclick="needAuth()">Upload Asset</button>
           </div>
+
           <div class="hero-trust-note">
             <span>✓ Free forever</span>
             <span class="htn-sep">·</span>
@@ -358,8 +380,8 @@
         </div>
       </section>
 
-      <!-- CTA -->
-      <section class="cta-band">
+      <!-- CTA — only shown to guests -->
+      <section class="cta-band guest-only">
         <div class="cta-deco-text cta-dt-1" aria-hidden="true">preserve</div>
         <div class="cta-deco-text cta-dt-2" aria-hidden="true">document</div>
         <div class="cta-deco-text cta-dt-3" aria-hidden="true">protect</div>
@@ -378,6 +400,24 @@
               <span>✓ Instant access</span>
               <span class="htn-sep">·</span>
               <span>✓ Cancel anytime</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA — only shown to logged-in users -->
+      <section class="cta-band user-only">
+        <div class="cta-deco-text cta-dt-1" aria-hidden="true">preserve</div>
+        <div class="cta-deco-text cta-dt-2" aria-hidden="true">document</div>
+        <div class="cta-deco-text cta-dt-3" aria-hidden="true">protect</div>
+        <div class="sw">
+          <div class="cta-inner">
+            <div class="float-label" style="margin-bottom:.75rem">✦ Contribute</div>
+            <h2 class="cta-title">Add to the global<br>preservation archive</h2>
+            <p class="cta-body">Upload images, 4K video, LiDAR surveys, 3D scans or documents of endangered heritage sites. Every record matters.</p>
+            <div class="cta-btns">
+              <button class="btn-gold btn-shimmer" onclick="needAuth()">Upload Asset</button>
+              <button class="btn-outline" onclick="goPage('archive')">Browse the archive</button>
             </div>
           </div>
         </div>
@@ -637,7 +677,6 @@
       </div>
       <div class="form-layout">
         <div class="form-main">
-
           <div class="fblock">
             <h3 class="fblock-label">Asset Details</h3>
             <div class="field"><label>Title <r>*</r></label><input type="text" id="e-ti"/></div>
@@ -679,7 +718,6 @@
             </div>
             <button class="btn-outline" style="margin-top:.5rem;font-size:.82rem;padding:.4rem .9rem" onclick="clearEditFile()">✕ Clear new file selection</button>
           </div>
-
         </div>
         <div class="form-side">
           <button class="btn-gold w100" onclick="doUpdate()">Save Changes</button>
@@ -820,8 +858,10 @@
       <nav class="foot-nav">
         <button class="foot-link" onclick="goPage('home')">Home</button>
         <button class="foot-link" onclick="goPage('archive')">Archive</button>
-        <button class="foot-link" onclick="goPage('login')">Sign in</button>
-        <button class="foot-link" onclick="openRegister()">Register</button>
+        <button class="foot-link guest-only" onclick="goPage('login')">Sign in</button>
+        <button class="foot-link guest-only" onclick="openRegister()">Register</button>
+        <button class="foot-link user-only" onclick="needAuth()">Upload</button>
+        <button class="foot-link user-only" onclick="goPage('profile')">Profile</button>
       </nav>
       <div class="foot-tech">
         <p class="foot-tech-label">Powered by</p>
