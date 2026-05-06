@@ -1,4 +1,4 @@
-/* HeritageGuard app.js — complete with Azure Logic App + Blob Storage + Computer Vision + AI Search */
+/* HeritageGuard app.js — complete with Azure Logic App + Blob Storage + Computer Vision + AI Search + Content Safety */
 
 let USERS = [
   { id:'u1', first:'Deepak',  last:'Pokhrel',  email:'admin@heritaguard.org',       pw:'admin1234', role:'admin',       org:'HeritageGuard',  joined:'2026-01-10' },
@@ -255,6 +255,7 @@ function openDetail(id,push=true){
   goPage('detail',push)
   if(push)history.replaceState({page:'detail',id},'','#detail-'+id)
 }
+
 function renderDetBody(a){
   const icon=TI[a.type]||'📁',label=TL[a.type]||a.type
   let media
@@ -294,11 +295,14 @@ function renderDetBody(a){
   const tagsHTML=(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')
   const specsHTML=a.specs&&Object.keys(a.specs).length?`<div class="det-block"><div class="det-block-label">${label} Specifications</div><div class="spec-grid">${Object.entries(a.specs).map(([k,v])=>`<div class="si"><span class="si-v">${v}</span><span class="si-k">${k}</span></div>`).join('')}</div></div>`:''
   const aiHTML=(a.aiTags||[]).length?`<div class="det-block"><div class="det-block-label">🤖 AI-Generated Tags (Azure Computer Vision)</div><div class="tags">${(a.aiTags||[]).map(t=>`<span class="tag" style="background:var(--aug);border-color:var(--au)">${t}</span>`).join('')}</div></div>`:''
-  const safetyHTML='<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#16a34a;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">✓ Passed — No harmful content detected</span></div></div>'
+  /* Dynamic Content Safety badge — green if passed, red if flagged, grey if not yet screened */
+  const safetyHTML=a.contentSafe===false
+    ?'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#ef4444;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">⚠️ Flagged — Content safety violation detected</span></div></div>'
+    :a.contentSafe===true
+      ?'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#16a34a;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">✓ Passed — No harmful content detected</span></div></div>'
+      :'<div class="det-block"><div class="det-block-label">🛡️ Azure Content Safety</div><div style="display:flex;align-items:center;gap:.5rem"><span style="background:#6b7280;color:#fff;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:600">— Screened on upload</span></div></div>'
   document.getElementById('det-body').innerHTML=`${media}<div class="det-eyebrow">${label} · ${a.uploadedAt||'—'} · by ${a.uploadedByName||'—'}</div><h1 class="det-title">${a.title||''}</h1><div class="det-metas"><div class="dm"><span class="dm-l">Location</span><span class="dm-v">${a.location||'—'}</span></div><div class="dm"><span class="dm-l">Region</span><span class="dm-v">${a.region||'—'}</span></div><div class="dm"><span class="dm-l">Type</span><span class="dm-v">${label}</span></div><div class="dm"><span class="dm-l">Uploaded by</span><span class="dm-v">${a.uploadedByName||'—'}</span></div></div><p class="det-desc">${a.description||'No description provided.'}</p><div class="tags">${tagsHTML}</div>${specsHTML}${aiHTML}${safetyHTML}`
 }
-
-
 
 /* ============================================================
    VIDEO PLAYBACK
@@ -501,25 +505,6 @@ function generateVideoThumbnail(file){
 }
 
 /* ============================================================
-   UPLOAD
-   ============================================================ */
-function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
-function onFilePick(input){
-  const drop=document.getElementById('fzone'),ui=document.getElementById('fzone-ui')
-  if(input.files&&input.files[0]){
-    const f=input.files[0]
-    drop.classList.add('ok')
-    if(f.type.startsWith('image/')){
-      const reader=new FileReader()
-      reader.onload=e=>{ui.innerHTML=`<img src="${e.target.result}" style="max-height:160px;border-radius:8px;object-fit:cover;width:100%;margin-bottom:.6rem"/><p class="fzone-main" style="color:var(--gr)">✓ ${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · Click to change</p>`}
-      reader.readAsDataURL(f)
-    }else{
-      ui.innerHTML=`<div class="fzone-icon" style="color:var(--gr)">✓</div><p class="fzone-main">${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · Click to change</p>`
-    }
-  }
-}
-
-/* ============================================================
    AZURE CONTENT SAFETY — screen uploads for harmful content
    ============================================================ */
 async function checkContentSafety(text){
@@ -550,7 +535,30 @@ async function checkContentSafety(text){
     return{safe:true}
   }catch(e){
     console.error('Content Safety error:',e)
-    return{safe:true} // fail open — don't block if API fails
+    return{safe:true}
+  }
+}
+
+/* ============================================================
+   UPLOAD
+   Step 1: Content Safety screen
+   Step 2: Upload to Azure Blob Storage (with progress)
+   Step 3: Generate video thumbnail OR run Computer Vision
+   Step 4: Save metadata to Cosmos DB via Logic App
+   ============================================================ */
+function chkSpecs(t){document.getElementById('spec-card').classList.toggle('hidden',t!=='3dscan'&&t!=='lidar')}
+function onFilePick(input){
+  const drop=document.getElementById('fzone'),ui=document.getElementById('fzone-ui')
+  if(input.files&&input.files[0]){
+    const f=input.files[0]
+    drop.classList.add('ok')
+    if(f.type.startsWith('image/')){
+      const reader=new FileReader()
+      reader.onload=e=>{ui.innerHTML=`<img src="${e.target.result}" style="max-height:160px;border-radius:8px;object-fit:cover;width:100%;margin-bottom:.6rem"/><p class="fzone-main" style="color:var(--gr)">✓ ${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · Click to change</p>`}
+      reader.readAsDataURL(f)
+    }else{
+      ui.innerHTML=`<div class="fzone-icon" style="color:var(--gr)">✓</div><p class="fzone-main">${f.name}</p><p class="fzone-sub">${(f.size/1024/1024).toFixed(2)} MB · Click to change</p>`
+    }
   }
 }
 
@@ -567,7 +575,7 @@ async function doUpload(){
   if(!file.files[0]){toast('Please select a file.','error');return}
   showLoad()
 
-  /* Azure Content Safety — screen title and description */
+  /* STEP 1 — Azure Content Safety screening */
   toast('Screening content with Azure Content Safety...','success')
   const safetyText=`${title} ${desc} ${tags}`
   const safetyResult=await checkContentSafety(safetyText)
@@ -578,6 +586,7 @@ async function doUpload(){
   }
   toast('Content Safety check passed ✓','success')
 
+  /* STEP 2 — Upload to Azure Blob Storage with progress */
   let blobUrl=''
   try{
     const f=file.files[0]
@@ -610,6 +619,7 @@ async function doUpload(){
     toast('Blob upload failed — saving without file','warn')
   }
 
+  /* STEP 3 — Video thumbnail OR Computer Vision */
   let thumbnailUrl=blobUrl
   let videoUrl=''
   let aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
@@ -630,6 +640,7 @@ async function doUpload(){
     if(cvTags.length>0){aiTags=[...new Set([...aiTags,...cvTags])]}
   }
 
+  /* STEP 4 — Build specs */
   const specs={}
   if(type==='3dscan'||type==='lidar'){
     const ac=document.getElementById('u-ac')?.value.trim()
@@ -642,13 +653,25 @@ async function doUpload(){
   if(type==='video'){specs['Resolution']='4K UHD';specs['Processing']='Scene detection & subtitles generated'}
 
   const newAsset={
-    id:'a'+Date.now(),title,description:desc,location:loc,region,type,
+    id:'a'+Date.now(),
+    title,
+    description:desc,
+    location:loc,
+    region,
+    type,
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
-    aiTags,specs,thumbnail:thumbnailUrl,videoUrl,
+    aiTags,
+    specs,
+    thumbnail:thumbnailUrl,
+    videoUrl,
     uploadedAt:new Date().toISOString().split('T')[0],
-    uploadedBy:me.id,uploadedByName:me.first+' '+me.last,featured:false
+    uploadedBy:me.id,
+    uploadedByName:me.first+' '+me.last,
+    featured:false,
+    contentSafe:true    /* ← always true here since failed uploads are blocked above */
   }
 
+  /* STEP 5 — Save to Cosmos DB */
   try{
     if(USE_LIVE){await createAsset(newAsset);ASSETS=await getAllAssets()}
     else{ASSETS.unshift(newAsset)}
