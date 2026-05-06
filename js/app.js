@@ -583,7 +583,7 @@ function onFilePick(input){
 }
 
 /* ============================================================
-   UPLOAD — main pipeline
+   UPLOAD — full pipeline
    ============================================================ */
 async function doUpload(){
   if(!me){toast('Please sign in first.','error');return}
@@ -710,7 +710,7 @@ function resetUpload(){
 }
 
 /* ============================================================
-   EDIT — with media replace support
+   EDIT — with full pipeline on new file
    ============================================================ */
 function onEditFilePick(input){
   const zone=document.getElementById('e-fzone')
@@ -730,10 +730,8 @@ function onEditFilePick(input){
 
 function clearEditFile(){
   document.getElementById('e-fi').value=''
-  const zone=document.getElementById('e-fzone')
-  if(zone)zone.classList.remove('ok')
-  const ui=document.getElementById('e-fzone-ui')
-  if(ui)ui.innerHTML='<div class="fzone-icon">↑</div><p class="fzone-main">Click to replace media file</p><p class="fzone-sub">Images · 4K Video · 3D Scans (.obj/.glb) · LiDAR (.las/.laz) · PDF</p>'
+  const zone=document.getElementById('e-fzone');if(zone)zone.classList.remove('ok')
+  const ui=document.getElementById('e-fzone-ui');if(ui)ui.innerHTML='<div class="fzone-icon">↑</div><p class="fzone-main">Click to replace media file</p><p class="fzone-sub">Images · 4K Video · 3D Scans (.obj/.glb) · LiDAR (.las/.laz) · PDF</p>'
 }
 
 function openEditPg(){
@@ -745,7 +743,6 @@ function openEditPg(){
   document.getElementById('e-re').value=a.region||''
   document.getElementById('e-ty').value=a.type||'image'
   document.getElementById('e-ta').value=(a.tags||[]).join(', ')
-  /* Show current media preview */
   const cur=document.getElementById('e-current-media')
   if(cur){
     if(a.thumbnail&&a.thumbnail.startsWith('https://')){
@@ -776,28 +773,27 @@ async function doUpdate(){
   if(!title||!loc){toast('Title and location are required.','error');return}
   showLoad()
 
-  /* Keep existing values as defaults */
+  /* Defaults — keep existing values unless new file uploaded */
   let thumbnailUrl=curAsset.thumbnail
   let videoUrl=curAsset.videoUrl||''
-  let aiTags=curAsset.aiTags||[]
+  let aiTags=curAsset.aiTags||[]     /* keep old tags by default */
   let specs={...curAsset.specs||{}}
   let contentSafe=curAsset.contentSafe!==false
 
-  /* If new file selected — run full pipeline */
+  /* Always run Content Safety on updated text */
+  toast('Checking content with Azure Content Safety...','success')
+  const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
+  if(!safetyResult.safe){
+    hideLoad()
+    toast('Update blocked by Azure Content Safety: '+safetyResult.reasons,'error')
+    return
+  }
+  toast('Content Safety check passed ✓','success')
+  contentSafe=true
+
+  /* If new file selected — run full pipeline and RESET AI tags */
   if(file&&file.files[0]){
-
-    /* STEP 1 — Content Safety on new metadata */
-    toast('Screening content with Azure Content Safety...','success')
-    const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
-    if(!safetyResult.safe){
-      hideLoad()
-      toast('Update blocked by Azure Content Safety: '+safetyResult.reasons,'error')
-      return
-    }
-    toast('Content Safety check passed ✓','success')
-    contentSafe=true
-
-    /* STEP 2 — Upload new file to Blob Storage */
+    /* Upload new file to Blob Storage */
     let newBlobUrl=''
     try{
       const f=file.files[0]
@@ -829,9 +825,9 @@ async function doUpdate(){
       toast('File upload failed — keeping existing file','warn')
     }
 
-    /* STEP 3 — Video: thumbnail + Video Indexer | Image: Computer Vision */
     if(newBlobUrl){
       if(type==='video'){
+        /* Video: thumbnail + Video Indexer */
         videoUrl=newBlobUrl
         toast('Generating video thumbnail...','success')
         try{
@@ -852,36 +848,35 @@ async function doUpdate(){
             }
           }
         }catch(e){console.warn('Video Indexer error:',e)}
+        /* Reset AI tags for video */
+        aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
       } else if(type==='image'){
+        /* Image: reset AI tags completely, run Computer Vision fresh */
         thumbnailUrl=newBlobUrl
+        aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()] /* ← RESET old tags */
         await new Promise(resolve=>setTimeout(resolve,2000))
         const cvTags=await analyseImageWithCV(newBlobUrl)
         if(cvTags.length>0){
-          aiTags=[...new Set([type,(loc.split(',')[0]||'').trim().toLowerCase(),...cvTags])]
-          toast('AI tags updated via Computer Vision ✓','success')
+          aiTags=[...new Set([...aiTags,...cvTags])] /* ← fresh CV tags only */
+          toast('AI tags regenerated via Computer Vision ✓','success')
         }
       } else {
+        /* Other types: just update thumbnail */
         thumbnailUrl=newBlobUrl
+        aiTags=[type,(loc.split(',')[0]||'').trim().toLowerCase()]
       }
     }
-  } else {
-    /* No new file — still re-run Content Safety on updated text */
-    toast('Checking content safety...','success')
-    const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
-    if(!safetyResult.safe){
-      hideLoad()
-      toast('Update blocked by Azure Content Safety: '+safetyResult.reasons,'error')
-      return
-    }
-    contentSafe=true
-    toast('Content Safety check passed ✓','success')
   }
 
   const updated={
     ...curAsset,
     title,description:desc,location:loc,region,type,
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
-    aiTags,specs,thumbnail:thumbnailUrl,videoUrl,contentSafe
+    aiTags,
+    specs,
+    thumbnail:thumbnailUrl,
+    videoUrl,
+    contentSafe
   }
 
   try{
@@ -901,6 +896,7 @@ async function doUpdate(){
     toast('Updated locally (API error: '+e.message+')','warn');renderDetBody(curAsset);goPage('detail')
   }
 }
+
 /* ============================================================
    DELETE ASSET
    ============================================================ */
