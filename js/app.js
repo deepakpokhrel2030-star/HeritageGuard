@@ -476,8 +476,9 @@ async function submitVideoToIndexer(videoUrl,videoName,token){
 
 /* ============================================================
    VIDEO THUMBNAIL GENERATOR
+   ── thumbnail blob name uses the asset ID as primary key ──
    ============================================================ */
-function generateVideoThumbnail(file){
+function generateVideoThumbnail(file, assetId){
   return new Promise((resolve,reject)=>{
     const video=document.createElement('video')
     const canvas=document.createElement('canvas')
@@ -491,7 +492,8 @@ function generateVideoThumbnail(file){
       URL.revokeObjectURL(url)
       canvas.toBlob(async(blob)=>{
         if(!blob){reject(new Error('Canvas empty'));return}
-        const thumbName='thumb-'+Date.now()+'.jpg'
+        /* Thumbnail name = thumb-{assetId}.jpg so it is linked to Cosmos DB ID */
+        const thumbName=`thumb-${assetId}.jpg`
         const uploadUrl=CONFIG.BLOB.baseUrl+'/'+thumbName+CONFIG.BLOB.sasToken
         try{
           const r=await fetch(uploadUrl,{method:'PUT',headers:{'x-ms-blob-type':'BlockBlob','Content-Type':'image/jpeg'},body:blob})
@@ -525,9 +527,12 @@ async function checkContentSafety(text){
 
 /* ============================================================
    BLOB UPLOAD HELPER
+   ── blobName = assetId + extension so Blob and Cosmos DB share the same primary key ──
    ============================================================ */
-async function uploadToBlob(file){
-  const blobName=Date.now()+'-'+file.name.replace(/\s+/g,'-')
+async function uploadToBlob(file, assetId){
+  /* Use the asset ID as the blob filename so Blob Storage and Cosmos DB share the same primary key */
+  const ext=file.name.split('.').pop().toLowerCase()
+  const blobName=`${assetId}.${ext}`
   const uploadUrl=CONFIG.BLOB.baseUrl+'/'+blobName+CONFIG.BLOB.sasToken
   const sizeMB=(file.size/1024/1024).toFixed(1)
   toast(file.size>50*1024*1024?`Uploading ${sizeMB}MB — large file, please wait...`:'Uploading to Azure Blob Storage...','success')
@@ -573,6 +578,8 @@ function onFilePick(input){
 
 /* ============================================================
    UPLOAD — full pipeline
+   ── Asset ID generated FIRST and used as primary key for both
+      Cosmos DB document ID and Blob Storage filename ──
    ============================================================ */
 async function doUpload(){
   if(!me){toast('Please sign in first.','error');return}
@@ -587,16 +594,24 @@ async function doUpload(){
   if(!file.files[0]){toast('Please select a file.','error');return}
   showLoad()
 
+  /* Generate asset ID FIRST — used as primary key for BOTH Cosmos DB and Blob Storage */
+  const assetId='a'+Date.now()
+
   /* STEP 1 — Content Safety */
   toast('Screening content with Azure Content Safety...','success')
   const safetyResult=await checkContentSafety(`${title} ${desc} ${tags}`)
   if(!safetyResult.safe){hideLoad();toast('Upload blocked by Azure Content Safety: '+safetyResult.reasons,'error');return}
   toast('Content Safety check passed ✓','success')
 
-  /* STEP 2 — Blob Storage */
+  /* STEP 2 — Blob Storage — blob filename = assetId.ext */
   let blobUrl=''
-  try{blobUrl=await uploadToBlob(file.files[0]);toast('File uploaded to Azure Blob Storage ✓','success')}
-  catch(e){console.error('Blob upload error:',e);toast('Blob upload failed — saving without file','warn')}
+  try{
+    blobUrl=await uploadToBlob(file.files[0], assetId)
+    toast('File uploaded to Azure Blob Storage ✓','success')
+  }catch(e){
+    console.error('Blob upload error:',e)
+    toast('Blob upload failed — saving without file','warn')
+  }
 
   /* STEP 3 — AI pipeline */
   let thumbnailUrl=blobUrl,videoUrl='',aiTags=[]
@@ -605,8 +620,11 @@ async function doUpload(){
   if(type==='video'&&file.files[0]&&blobUrl){
     videoUrl=blobUrl
     toast('Generating video thumbnail...','success')
-    try{thumbnailUrl=await generateVideoThumbnail(file.files[0]);toast('Video thumbnail generated ✓','success')}
-    catch(e){console.warn('Thumbnail failed:',e);thumbnailUrl=''}
+    try{
+      /* Thumbnail name = thumb-{assetId}.jpg — linked to same primary key */
+      thumbnailUrl=await generateVideoThumbnail(file.files[0], assetId)
+      toast('Video thumbnail generated ✓','success')
+    }catch(e){console.warn('Thumbnail failed:',e);thumbnailUrl=''}
     toast('Submitting to Azure Video Indexer...','success')
     try{
       const viToken=await getVideoIndexerToken()
@@ -636,8 +654,10 @@ async function doUpload(){
     if(eq)specs['Equipment']=eq
   }
 
+  /* Asset ID = Cosmos DB document ID = Blob filename base — all share the same primary key */
   const newAsset={
-    id:'a'+Date.now(),title,description:desc,location:loc,region,type,
+    id:assetId,       /* ← primary key used for both Cosmos DB and Blob Storage */
+    title,description:desc,location:loc,region,type,
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
     aiTags,specs,thumbnail:thumbnailUrl,videoUrl,
     uploadedAt:new Date().toISOString().split('T')[0],
@@ -695,13 +715,11 @@ function openEditPg(){
   document.getElementById('e-ti').value=a.title||''
   document.getElementById('e-de').value=a.description||''
   document.getElementById('e-lo').value=a.location||''
-  /* Region is fully editable — duplicate handled in doUpdate */
   const reEl=document.getElementById('e-re')
   reEl.value=a.region||''
   reEl.disabled=false
   document.getElementById('e-ty').value=a.type||'image'
   document.getElementById('e-ta').value=(a.tags||[]).join(', ')
-  /* Show current media preview */
   const cur=document.getElementById('e-current-media')
   if(cur){
     if(a.thumbnail&&a.thumbnail.startsWith('https://')){
@@ -722,6 +740,7 @@ function editFromCard(id){const a=ASSETS.find(x=>x.id===id);if(!a)return;curAsse
 
 /* ============================================================
    EDIT — full pipeline, region change safe, clean AI tags
+   ── On new file upload, blob name = assetId.ext (same primary key) ──
    ============================================================ */
 async function doUpdate(){
   if(!curAsset)return
@@ -735,10 +754,9 @@ async function doUpdate(){
   if(!title||!loc){toast('Title and location are required.','error');return}
   showLoad()
 
-  /* Store original region for partition key logic */
   const originalRegion=curAsset.region
+  const assetId=curAsset.id  /* use existing asset ID as primary key for replacement blob */
 
-  /* Keep existing values as defaults */
   let thumbnailUrl=curAsset.thumbnail
   let videoUrl=curAsset.videoUrl||''
   let aiTags=curAsset.aiTags||[]
@@ -752,18 +770,26 @@ async function doUpdate(){
   toast('Content Safety check passed ✓','success')
   contentSafe=true
 
-  /* If new file selected — run full pipeline and reset AI tags */
+  /* If new file — upload using same assetId as blob name (replaces old blob) */
   if(file&&file.files[0]){
     let newBlobUrl=''
-    try{newBlobUrl=await uploadToBlob(file.files[0]);toast('File uploaded to Azure Blob Storage ✓','success')}
-    catch(e){console.error('Blob upload error:',e);toast('File upload failed — keeping existing file','warn')}
+    try{
+      /* Blob name = assetId.newExt — keeps primary key consistent */
+      newBlobUrl=await uploadToBlob(file.files[0], assetId)
+      toast('File uploaded to Azure Blob Storage ✓','success')
+    }catch(e){
+      console.error('Blob upload error:',e)
+      toast('File upload failed — keeping existing file','warn')
+    }
 
     if(newBlobUrl){
       if(type==='video'){
         videoUrl=newBlobUrl
         toast('Generating video thumbnail...','success')
-        try{thumbnailUrl=await generateVideoThumbnail(file.files[0]);toast('Video thumbnail generated ✓','success')}
-        catch(e){thumbnailUrl=newBlobUrl}
+        try{
+          thumbnailUrl=await generateVideoThumbnail(file.files[0], assetId)
+          toast('Video thumbnail generated ✓','success')
+        }catch(e){thumbnailUrl=newBlobUrl}
         toast('Submitting to Azure Video Indexer...','success')
         try{
           const viToken=await getVideoIndexerToken()
@@ -778,14 +804,14 @@ async function doUpdate(){
             }
           }
         }catch(e){console.warn('Video Indexer error:',e)}
-        aiTags=[] /* reset for video */
+        aiTags=[]
       } else if(type==='image'){
         thumbnailUrl=newBlobUrl
-        aiTags=[] /* reset old tags completely before CV */
+        aiTags=[]
         await new Promise(resolve=>setTimeout(resolve,2000))
         const cvTags=await analyseImageWithCV(newBlobUrl)
         if(cvTags.length>0){
-          aiTags=[...new Set(cvTags)] /* only fresh CV tags — no old ones */
+          aiTags=[...new Set(cvTags)]
           toast('AI tags regenerated via Computer Vision ✓','success')
         }
       } else {
@@ -797,16 +823,13 @@ async function doUpdate(){
 
   const updated={
     ...curAsset,
-    title,description:desc,location:loc,
-    region, /* region is editable — handled below */
-    type,
+    title,description:desc,location:loc,region,type,
     tags:tags?tags.split(',').map(t=>t.trim()).filter(Boolean):[],
     aiTags,specs,thumbnail:thumbnailUrl,videoUrl,contentSafe
   }
 
   try{
     if(USE_LIVE){
-      /* If region changed — delete old partition key doc, create new one */
       if(region!==originalRegion){
         toast('Region changed — updating Cosmos DB partition...','success')
         await deleteAsset(curAsset.id,originalRegion)
