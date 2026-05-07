@@ -38,11 +38,21 @@ async function boot(){
   history.replaceState({page:'home'},'','#home')
   goPage('home',false)
   renderSkeletons('featured-grid',4)
-  try{ASSETS=USE_LIVE?await getAllAssets():await fetch('assets.json').then(r=>r.json())}catch(e){ASSETS=[];console.warn(e)}
+
+  try{
+    ASSETS=USE_LIVE?await getAllAssets():await fetch('assets.json').then(r=>r.json())
+  }catch(e){
+    ASSETS=[]
+    console.warn(e)
+  }
+
+  await refreshUsers()
+
   try{
     const saved=localStorage.getItem('hg_session')
     if(saved){const {id}=JSON.parse(saved);const u=USERS.find(u=>u.id===id);if(u)signIn(u,true)}
   }catch(e){localStorage.removeItem('hg_session')}
+
   renderFeatured()
   const el=document.getElementById('home-total');if(el)el.textContent=ASSETS.length
   const el2=document.getElementById('ic-total');if(el2)el2.textContent=ASSETS.length
@@ -61,7 +71,7 @@ function goPage(n,push=true){
   if(push)history.pushState({page:n},'','#'+n)
   window.scrollTo({top:0,behavior:'smooth'})
   if(n==='archive')renderArchive()
-  if(n==='admin')renderAdmin()
+  if(n==='admin')renderAdmin().catch(console.error)
   if(n==='home'){renderFeatured();if(!countersAnimated)initCounters()}
   if(n==='profile')renderProfile()
   if(n==='upload')setTimeout(initDragDrop,50)
@@ -313,6 +323,53 @@ function playVideo(){
     wrap.innerHTML=`<video class="det-video-frame" src="${src}" controls autoplay style="width:100%;height:100%;background:#000;border-radius:8px">Your browser does not support video playback.</video>`
   } else {
     wrap.innerHTML=`<div class="det-video-unavail"><div class="dvu-icon">🎬</div><p class="dvu-title">Streamed via Azure Media Services</p><p class="dvu-sub">This ${curAsset.specs?.Duration||''} documentary is stored in Azure Blob Storage and streamed on demand.</p><button class="btn-outline" onclick="toast('Stream access request sent.','success')">Request Access</button></div>`
+  }
+}
+
+async function getAllUsersFromCosmos(){
+  if(!CONFIG.ENDPOINTS.getUsers){
+    console.warn('Missing CONFIG.ENDPOINTS.getUsers')
+    return USERS
+  }
+
+  const r=await fetch(CONFIG.ENDPOINTS.getUsers,{
+    method:'GET',
+    headers:{'Content-Type':'application/json'}
+  })
+
+  if(!r.ok){
+    const errText=await r.text()
+    throw new Error('Get users failed: '+r.status+' — '+errText)
+  }
+
+  const data=await r.json()
+
+  const users=Array.isArray(data)
+    ? data
+    : (data.Documents||data.documents||data.value||data.items||data.users||[])
+
+  return users.map(u=>({
+    id:u.id,
+    first:u.first||u.firstName||'',
+    last:u.last||u.lastName||'',
+    email:u.email||'',
+    pw:u.pw||u.password||'',
+    role:u.role||'contributor',
+    org:u.org||'Public',
+    joined:u.joined||''
+  }))
+}
+
+async function refreshUsers(){
+  try{
+    if(USE_LIVE){
+      const liveUsers=await getAllUsersFromCosmos()
+      if(liveUsers&&liveUsers.length){
+        USERS=liveUsers
+      }
+    }
+  }catch(e){
+    console.error('Could not load users from Cosmos DB:',e)
   }
 }
 
@@ -984,8 +1041,11 @@ async function changePass(){
    ============================================================ */
 let adminView='u'
 function adminTab(t){adminView=t;document.getElementById('adv-u').classList.toggle('hidden',t!=='u');document.getElementById('adv-a').classList.toggle('hidden',t!=='a');document.getElementById('adt-u').classList.toggle('active',t==='u');document.getElementById('adt-a').classList.toggle('active',t==='a')}
-function renderAdmin(){
+async function renderAdmin(){
   if(!me||me.role!=='admin'){toast('Admin access required.','error');goPage('home');return}
+
+  await refreshUsers()
+
   document.getElementById('ub').textContent=USERS.length;document.getElementById('ab').textContent=ASSETS.length
   document.getElementById('t-users').innerHTML=USERS.map(u=>`<tr><td style="color:#0c0e1c;font-weight:600">${u.first} ${u.last}</td><td>${u.email}</td><td><span class="role-badge ${u.role}">${u.role}</span></td><td>${u.org||'—'}</td><td>${u.joined||'—'}</td><td><div class="row-acts">${u.id!==me.id?`<button class="btn-danger-sm" onclick="delUser('${u.id}','${u.first} ${u.last}')">Remove</button>`:`<span style="font-size:.72rem;color:var(--t3)">You</span>`}</div></td></tr>`).join('')
   document.getElementById('t-assets').innerHTML=ASSETS.map(a=>`<tr><td style="color:#0c0e1c;font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.title}</td><td>${TL[a.type]||a.type}</td><td>${a.location||'—'}</td><td>${a.uploadedByName||'—'}</td><td>${a.uploadedAt||'—'}</td><td><div class="row-acts"><button class="btn-sm-outline btn-sm" onclick="openDetail('${a.id}')">View</button><button class="btn-danger-sm" onclick="delFromCard('${a.id}','${(a.title||'').replace(/'/g,"\\'")}')">Delete</button></div></td></tr>`).join('')
